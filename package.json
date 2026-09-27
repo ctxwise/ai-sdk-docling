@@ -1,6 +1,6 @@
 {
   "name": "@ctxwise/ai-sdk-docling",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Vercel AI SDK middleware that turns chat attachments (PDF, Office, images, scans) into LLM-ready text and images with docling-serve, using vision only where OCR is not confident",
   "keywords": [
     "ai-sdk",
