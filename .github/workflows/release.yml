@@ -19,9 +19,6 @@ jobs:
       - uses: googleapis/release-please-action@v5
         id: release
         with:
-          # optional: a fine-grained token (Contents + Pull requests: read/write) lets release PRs be opened without the
-          # org's "Allow GitHub Actions to create and approve pull requests" setting, and makes CI run on them
-          token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
