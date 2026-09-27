@@ -9,7 +9,7 @@ and sends the vision model only what OCR can't read.
 [![npm](https://img.shields.io/npm/v/ai-sdk-docling?color=2a78d6)](https://www.npmjs.com/package/ai-sdk-docling)
 [![CI](https://github.com/uditkumar01/ai-sdk-docling/actions/workflows/ci.yml/badge.svg)](https://github.com/uditkumar01/ai-sdk-docling/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2a78d6)](LICENSE)
-[![Node](https://img.shields.io/badge/node-%3E%3D20-2a78d6)](package.json)
+[![Node](https://img.shields.io/badge/node-%3E%3D22-2a78d6)](package.json)
 [![AI SDK](https://img.shields.io/badge/AI%20SDK-v7-000000)](https://ai-sdk.dev)
 
 [Quick start](#quick-start) · [Examples](#examples) · [How it works](#how-it-works) · [Configuration](#configuration) ·
