@@ -80,6 +80,17 @@ One-line [Conventional Commits](https://www.conventionalcommits.org): `<type>: <
 
 Example: `fix: keep the original image when docling finds no text`
 
+## Diagrams
+
+README diagrams are images, because npm doesn't render Mermaid. Edit the sources in `docs/diagrams/*.mmd`, then
+regenerate the PNGs:
+
+```bash
+for n in how-it-works vision-model; do
+  docker run --rm -u root -v "$PWD/docs:/data" ghcr.io/mermaid-js/mermaid-cli/mermaid-cli     -i /data/diagrams/$n.mmd -o /data/images/$n.png -c /data/diagrams/theme.json -b "#fcfcfb" -s 2
+done
+```
+
 ## Benchmarks
 
 Changes to routing (`minConfidence`, `denseChars`, what goes as an image) should show their effect on the

@@ -1,0 +1,12 @@
+flowchart LR
+    A[attachment] --> B{type}
+    B -->|PDF, image, Office,<br/>ODF, RTF, EPUB, HTML, CSV| C[docling]
+    B -->|TXT MD JSON code| T[text, read as-is]
+    B -->|anything else| N[short note]
+    C --> D{each page:<br/>confidence >= 0.8?}
+    D -->|yes| E[text + tables<br/>+ picture crops]
+    D -->|no| F[the page as an image]
+    E --> M[model]
+    F --> M
+    T --> M
+    N --> M

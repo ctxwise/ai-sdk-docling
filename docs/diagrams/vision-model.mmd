@@ -1,0 +1,12 @@
+sequenceDiagram
+    participant S as streamText (main model)
+    participant M as middleware
+    participant D as docling-serve
+    participant V as visionModel
+    S->>M: user message + attachment
+    M->>D: the file
+    D-->>M: text, tables, picture crops, page scores
+    M->>V: each picture and low-confidence page (in parallel)
+    V-->>M: transcription (tables as Markdown, chart values, photo description)
+    M-->>S: text only
+    S-->>S: answers the user

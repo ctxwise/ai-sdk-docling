@@ -8,12 +8,12 @@ and sends the vision model only what OCR can't read.
 
 [![npm](https://img.shields.io/npm/v/@ctxwise/ai-sdk-docling?color=2a78d6)](https://www.npmjs.com/package/@ctxwise/ai-sdk-docling)
 [![CI](https://github.com/ctxwise/ai-sdk-docling/actions/workflows/ci.yml/badge.svg)](https://github.com/ctxwise/ai-sdk-docling/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-2a78d6)](LICENSE)
-[![Node](https://img.shields.io/badge/node-%3E%3D22-2a78d6)](package.json)
+[![License: MIT](https://img.shields.io/badge/license-MIT-2a78d6)](https://github.com/ctxwise/ai-sdk-docling/blob/main/LICENSE)
+[![Node](https://img.shields.io/badge/node-%3E%3D22-2a78d6)](https://github.com/ctxwise/ai-sdk-docling/blob/main/package.json)
 [![AI SDK](https://img.shields.io/badge/AI%20SDK-v7-000000)](https://ai-sdk.dev)
 
 [Quick start](#quick-start) · [Examples](#examples) · [How it works](#how-it-works) · [Configuration](#configuration) ·
-[Benchmarks](#results) · [Comparison](docs/COMPARISON.md) · [Contributing](CONTRIBUTING.md)
+[Benchmarks](#results) · [Comparison](https://github.com/ctxwise/ai-sdk-docling/blob/main/docs/COMPARISON.md) · [Contributing](https://github.com/ctxwise/ai-sdk-docling/blob/main/CONTRIBUTING.md)
 
 </div>
 
@@ -74,7 +74,7 @@ your server. Complete routes and scripts are under [Examples](#examples).
 
 ## Examples
 
-Runnable, type-checked examples live in [examples/](examples/README.md). The most common setups:
+Runnable, type-checked examples live in [examples/](https://github.com/ctxwise/ai-sdk-docling/blob/main/examples/README.md). The most common setups:
 
 <details open>
 <summary><b>Next.js chat with file uploads</b> - route + client</summary>
@@ -233,20 +233,7 @@ const markdown = doclingToBlocks(doc).map((b) => (b.type === 'text' ? b.text : '
 
 ## How it works
 
-```mermaid
-flowchart LR
-    A[attachment] --> B{type}
-    B -->|PDF, image, Office,<br/>ODF, RTF, EPUB, HTML, CSV| C[docling]
-    B -->|TXT MD JSON code| T[text, read as-is]
-    B -->|anything else| N[short note]
-    C --> D{each page:<br/>confidence >= 0.8?}
-    D -->|yes| E[text + tables<br/>+ picture crops]
-    D -->|no| F[the page as an image]
-    E --> M[model]
-    F --> M
-    T --> M
-    N --> M
-```
+![How attachments are routed](https://raw.githubusercontent.com/ctxwise/ai-sdk-docling/main/docs/images/how-it-works.png)
 
 The default is a hybrid, decided page by page:
 
@@ -281,20 +268,7 @@ must accept images (and PDFs, for the all-pages-low fallback). With `gpt-5-mini`
 **A separate vision model.** Set `visionModel` and the middleware sends every image and fallback page to that model
 first, and replaces it with the model's transcription. The model in `streamText` then receives **text only**:
 
-```mermaid
-sequenceDiagram
-    participant S as streamText (main model)
-    participant M as middleware
-    participant D as docling-serve
-    participant V as visionModel
-    S->>M: user message + attachment
-    M->>D: the file
-    D-->>M: text, tables, picture crops, page scores
-    M->>V: each picture and low-confidence page (in parallel)
-    V-->>M: transcription (tables as Markdown, chart values, photo description)
-    M-->>S: text only
-    S-->>S: answers the user
-```
+![Separate vision model: request flow](https://raw.githubusercontent.com/ctxwise/ai-sdk-docling/main/docs/images/vision-model.png)
 
 ```ts
 const model = wrapLanguageModel({
@@ -521,26 +495,26 @@ the surrounding text carry the name, so they are always placed next to the image
 ## Results
 
 88 hard OmniDocBench pages (handwriting, tables, charts, irregular layouts, newspapers), read by `gpt-5-mini`.
-Full comparison with docling alone, PyMuPDF4LLM and MarkItDown: [docs/COMPARISON.md](docs/COMPARISON.md).
+Full comparison with docling alone, PyMuPDF4LLM and MarkItDown: [docs/COMPARISON.md](https://github.com/ctxwise/ai-sdk-docling/blob/main/docs/COMPARISON.md).
 
-![Parsing quality](docs/images/quality.png)
+![Parsing quality](https://raw.githubusercontent.com/ctxwise/ai-sdk-docling/main/docs/images/quality.png)
 
-![Text error by page type](docs/images/by-page-type.png)
+![Text error by page type](https://raw.githubusercontent.com/ctxwise/ai-sdk-docling/main/docs/images/by-page-type.png)
 
 Neither source wins everywhere - docling is best on clean and dense print, vision on handwriting and layouts.
 Routing by confidence takes the better one per page.
 
-![Cost vs quality](docs/images/cost-vs-quality.png)
+![Cost vs quality](https://raw.githubusercontent.com/ctxwise/ai-sdk-docling/main/docs/images/cost-vs-quality.png)
 
 <details>
 <summary>How the thresholds were chosen</summary>
 
-![Confidence threshold](docs/images/confidence-threshold.png)
+![Confidence threshold](https://raw.githubusercontent.com/ctxwise/ai-sdk-docling/main/docs/images/confidence-threshold.png)
 
 Docling's `low_score` ranged 0.67-0.96 on these pages; all pages where docling failed scored 0.85 or lower.
 At 0.8, 40% of hard pages go to the model as images - clean documents score higher and stay text.
 
-![Hint threshold](docs/images/hint-threshold.png)
+![Hint threshold](https://raw.githubusercontent.com/ctxwise/ai-sdk-docling/main/docs/images/hint-threshold.png)
 
 In page mode, docling's text is added next to the image only on dense pages without tables. Anywhere between
 2,500 and 6,000 characters gives the same result.
@@ -562,9 +536,9 @@ The first conversion adds about 1.5 GB, each further parallel conversion about 1
 around 2 GB (the models stay loaded). Page images are rendered only when a page needs one, which cuts each response
 by 80%; plain-text files skip docling entirely.
 
-![Memory](docs/images/memory.png)
+![Memory](https://raw.githubusercontent.com/ctxwise/ai-sdk-docling/main/docs/images/memory.png)
 
-![Speed](docs/images/speed.png)
+![Speed](https://raw.githubusercontent.com/ctxwise/ai-sdk-docling/main/docs/images/speed.png)
 
 - **Avoid burstable CPU for steady traffic.** Sustained conversion drains CPU credits, after which a burstable
   instance runs at a fraction of its vCPUs. Use unlimited-credit mode or a fixed-performance instance.
@@ -589,9 +563,9 @@ doesn't either), sanitizes file names, and never shows internal errors to the mo
 
 ## Contributing
 
-Issues and pull requests are welcome - see [CONTRIBUTING.md](CONTRIBUTING.md) for setup, tests, commit style and
-how to benchmark routing changes. Please report security issues privately ([SECURITY.md](SECURITY.md)). This
-project follows a [code of conduct](CODE_OF_CONDUCT.md); changes are listed in [CHANGELOG.md](CHANGELOG.md).
+Issues and pull requests are welcome - see [CONTRIBUTING.md](https://github.com/ctxwise/ai-sdk-docling/blob/main/CONTRIBUTING.md) for setup, tests, commit style and
+how to benchmark routing changes. Please report security issues privately ([SECURITY.md](https://github.com/ctxwise/ai-sdk-docling/blob/main/SECURITY.md)). This
+project follows a [code of conduct](https://github.com/ctxwise/ai-sdk-docling/blob/main/CODE_OF_CONDUCT.md); changes are listed in [CHANGELOG.md](https://github.com/ctxwise/ai-sdk-docling/blob/main/CHANGELOG.md).
 
 ## Acknowledgements
 
@@ -601,4 +575,4 @@ evaluated with [OmniDocBench](https://github.com/opendatalab/OmniDocBench).
 
 ## License
 
-[MIT](LICENSE)
+[MIT](https://github.com/ctxwise/ai-sdk-docling/blob/main/LICENSE)
