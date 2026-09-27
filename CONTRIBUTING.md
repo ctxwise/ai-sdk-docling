@@ -85,5 +85,14 @@ middleware's rules to saved outputs. Include the before/after table from `bench/
 
 ## Releases
 
-Maintainers only: update `CHANGELOG.md`, bump `version` in `package.json`, tag `vX.Y.Z`, then `npm publish`
-(`prepublishOnly` runs typecheck, tests and build).
+Releases are automated with [release-please](https://github.com/googleapis/release-please); nobody edits the
+version or the changelog by hand.
+
+1. Commits on `main` (in the format above) keep a **release pull request** open, with the next version and the
+   generated CHANGELOG.md entry.
+2. The version comes from the commits since the last release: `feat:` bumps the minor; `fix:`, `perf:`, `docs:`,
+   `build:` and `revert:` the patch; a breaking change (`feat!:` or a `BREAKING CHANGE:` footer) the major - the
+   minor while the version is below 1.0. `refactor`, `test`, `chore`, `ci` and `style` commits are left out of the
+   changelog and never trigger a release on their own.
+3. Merging the release pull request tags `vX.Y.Z`, creates the GitHub release, and publishes to npm
+   (`.github/workflows/release.yml`, once publishing is enabled).

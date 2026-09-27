@@ -1,17 +1,10 @@
 # Changelog
 
-All notable changes to this project are documented here. The format follows
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org).
+All notable changes to this project. Versions follow [Semantic Versioning](https://semver.org); entries are
+generated from [Conventional Commits](https://www.conventionalcommits.org) by
+[release-please](https://github.com/googleapis/release-please) when a release pull request is merged.
 
-## [Unreleased]
-
-### Added
-
-- Runnable examples in `examples/` (summarize a file, Next.js route, plain Node server, separate vision model,
-  structured extraction, custom limits and types, parsing without an LLM).
-- `doclingAttachments` throws at setup when `url` is missing.
-
-## [0.1.0] - 2026-09-27
+## [0.1.0](https://github.com/uditkumar01/ai-sdk-docling/releases/tag/v0.1.0) (2026-09-27)
 
 ### Added
 
@@ -23,6 +16,3 @@ All notable changes to this project are documented here. The format follows
 - Lower-level API: `convertWithDocling`, `doclingToBlocks`, `pageBlocks`, `pageText`.
 - docling-serve image with LibreOffice (DOC, XLS, PPT, RTF) and per-page confidence.
 - OmniDocBench, Office, speed and memory benchmarks, and a comparison with PyMuPDF4LLM and MarkItDown.
-
-[Unreleased]: https://github.com/uditkumar01/ai-sdk-docling/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/uditkumar01/ai-sdk-docling/releases/tag/v0.1.0
