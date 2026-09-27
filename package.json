@@ -56,11 +56,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/uditkumar01/ai-sdk-docling.git"
+    "url": "git+https://github.com/ctxwise/ai-sdk-docling.git"
   },
-  "homepage": "https://github.com/uditkumar01/ai-sdk-docling#readme",
+  "homepage": "https://github.com/ctxwise/ai-sdk-docling#readme",
   "bugs": {
-    "url": "https://github.com/uditkumar01/ai-sdk-docling/issues"
+    "url": "https://github.com/ctxwise/ai-sdk-docling/issues"
   },
   "publishConfig": {
     "access": "public"

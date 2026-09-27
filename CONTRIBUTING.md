@@ -15,7 +15,7 @@ Thanks for helping. Bug reports, benchmark results on your own documents and pul
 Requirements: Node 24 (tests run TypeScript directly), Docker, and [dotenvx](https://dotenvx.com) for secrets.
 
 ```bash
-git clone https://github.com/uditkumar01/ai-sdk-docling.git
+git clone https://github.com/ctxwise/ai-sdk-docling.git
 cd ai-sdk-docling
 npm install
 cp .env.example .env
