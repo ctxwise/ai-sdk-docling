@@ -1,0 +1,43 @@
+name: Bug report
+description: Something parsed wrong, crashed, or failed a request
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for reporting. Please don't attach confidential documents - a small file that reproduces the problem is ideal.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: The options passed to `doclingAttachments`, the file type (media type), and the call (`streamText`, `generateText`, ...).
+      render: ts
+    validations:
+      required: true
+  - type: textarea
+    id: received
+    attributes:
+      label: What the model received
+      description: |
+        The parts after the middleware, if you can get them (e.g. a mock model's `doGenerateCalls[0].prompt`, or `examples/07-parse-without-llm.ts` on the file).
+      render: text
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: ai-sdk-docling, ai, the provider package, docling-serve image, Node.
+      placeholder: ai-sdk-docling 0.1.0, ai 7.0.113, @ai-sdk/openai 4.0.1, docling-serve v1.35.0, Node 24
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Anything from `onError` / the server log, and docling-serve's container log if relevant.
+      render: text

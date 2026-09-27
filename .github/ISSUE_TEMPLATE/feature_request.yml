@@ -1,0 +1,21 @@
+name: Feature request
+description: A new option, file type, provider or routing idea
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What you're trying to do, and why the current options don't cover it.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: How it could work - an option, an API sketch, a routing rule.
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: For quality or routing changes, any measurements or example documents (see CONTRIBUTING.md, Benchmarks).
