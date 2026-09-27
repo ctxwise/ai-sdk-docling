@@ -1,27 +1,42 @@
+<div align="center">
+
 # ai-sdk-docling
 
-Chat attachments that any LLM can read. A [Vercel AI SDK](https://ai-sdk.dev) middleware that parses every
-attachment - PDFs, scans, Word, PowerPoint, Excel, images - with a self-hosted
-[docling-serve](https://github.com/docling-project/docling-serve), and sends the vision model only what OCR
-can't read: pictures, handwriting and badly scanned pages.
+**Chat attachments any LLM can read.**<br/>
+Vercel AI SDK middleware that parses PDFs, scans, Office files and images with docling,<br/>
+and sends the vision model only what OCR can't read.
 
-- **No failed requests.** OpenAI's AI SDK provider throws on any file that isn't a PDF or an image; a `.docx` or
-  `.xlsx` attachment fails the whole chat. Every attachment here becomes text and image parts the model accepts.
-- **OCR for text, vision for the rest.** Docling reads layout, text and tables; charts and photos go to the model
-  as images; pages docling can't read reliably go as page images. Docling reports its own confidence, so the
-  expensive path is only taken where it pays off.
-- **Measured, not guessed.** Every rule was tuned on [OmniDocBench](https://github.com/opendatalab/OmniDocBench)
-  and compared with other parsers ([docs/COMPARISON.md](docs/COMPARISON.md)).
+[![npm](https://img.shields.io/npm/v/ai-sdk-docling?color=2a78d6)](https://www.npmjs.com/package/ai-sdk-docling)
+[![CI](https://github.com/uditkumar01/ai-sdk-docling/actions/workflows/ci.yml/badge.svg)](https://github.com/uditkumar01/ai-sdk-docling/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-2a78d6)](LICENSE)
+[![Node](https://img.shields.io/badge/node-%3E%3D20-2a78d6)](package.json)
+[![AI SDK](https://img.shields.io/badge/AI%20SDK-v7-000000)](https://ai-sdk.dev)
+
+[Quick start](#quick-start) · [Examples](#examples) · [How it works](#how-it-works) · [Configuration](#configuration) ·
+[Benchmarks](#results) · [Comparison](docs/COMPARISON.md) · [Contributing](CONTRIBUTING.md)
+
+</div>
+
+---
+
+## Features
+
+- **Every attachment works.** PDF, scans, DOCX/DOC, PPTX/PPT, XLSX/XLS, ODF, RTF, EPUB, HTML, CSV, images, plain
+  text. OpenAI's provider throws on anything but PDFs and images; here every file becomes parts the model accepts.
+- **OCR for text, vision for the rest.** Docling reads layout, text and tables; charts and photos go to the model as
+  images; only pages docling reads unreliably (by its own per-page confidence) go as page images.
+- **Structure kept.** Tables as Markdown with merged headers, slide numbers, speaker notes, sheet names, and the data
+  behind PowerPoint and Excel charts.
+- **Any model setup.** One vision model, or a separate `visionModel` that reads images into text for a main model.
+- **Production-minded.** Parse cache keyed by content hash, file/page/time limits, no server-side URL fetching
+  (SSRF), sanitized names, safe error notes, CPU-only self-hosted docling.
+- **Measured.** Tuned on OmniDocBench; compared with docling alone, PyMuPDF4LLM and MarkItDown.
 
 | 88 hard pages (handwriting, tables, charts, layouts) | This project | docling alone | PyMuPDF4LLM | MarkItDown + OCR |
 |---|---|---|---|---|
 | Text error (lower is better) | **0.112** | 0.171 | 0.311 | 0.166 |
 | Table accuracy, TEDS (higher is better) | **79.1** | 68.6 | 35.0 | 0.0 |
 | Pages sent to an LLM | 40% | 0% | 0% | 100% |
-
-**Contents:** [Quick start](#quick-start) · [How it works](#how-it-works) · [Choosing models](#choosing-models) ·
-[Presets](#presets) · [Configuration](#configuration) · [Supported documents](#supported-documents) ·
-[Results](#results) · [Deployment](#deployment) · [Limitations](#limitations) · [Development](#development)
 
 ## Quick start
 
@@ -40,13 +55,34 @@ dotenvx set DOCLING_API_KEY "$(openssl rand -hex 24)"
 dotenvx run -- docker compose up -d --build
 ```
 
-**3. Wrap your model** in the chat route. The middleware runs on your server; create it once at module scope so
-its cache is shared across requests.
+**3. Wrap your model** once, at module scope (the parse cache is shared across requests), and use it anywhere
+you'd use the plain model - `streamText`, `generateText`, a `useChat` route:
+
+```ts
+import { openai } from '@ai-sdk/openai';
+import { wrapLanguageModel } from 'ai';
+import { doclingAttachments } from 'ai-sdk-docling';
+
+export const model = wrapLanguageModel({
+  model: openai('gpt-5-mini'),
+  middleware: doclingAttachments({ url: process.env.DOCLING_URL!, apiKey: process.env.DOCLING_API_KEY }),
+});
+```
+
+Pass `experimental_download: noServerDownloads` on each call so the AI SDK never fetches user-supplied URLs from
+your server. Complete routes and scripts are under [Examples](#examples).
+
+## Examples
+
+Runnable, type-checked examples live in [examples/](examples/README.md). The most common setups:
+
+<details open>
+<summary><b>Next.js chat with file uploads</b> - route + client</summary>
 
 ```ts
 // app/api/chat/route.ts
 import { openai } from '@ai-sdk/openai';
-import { convertToModelMessages, streamText, wrapLanguageModel } from 'ai';
+import { convertToModelMessages, streamText, wrapLanguageModel, type UIMessage } from 'ai';
 import { doclingAttachments, noServerDownloads } from 'ai-sdk-docling';
 
 const model = wrapLanguageModel({
@@ -54,8 +90,10 @@ const model = wrapLanguageModel({
   middleware: doclingAttachments({ url: process.env.DOCLING_URL!, apiKey: process.env.DOCLING_API_KEY }),
 });
 
+export const maxDuration = 300;
+
 export async function POST(req: Request) {
-  const { messages } = await req.json();
+  const { messages }: { messages: UIMessage[] } = await req.json();
   return streamText({
     model,
     messages: await convertToModelMessages(messages),
@@ -64,16 +102,37 @@ export async function POST(req: Request) {
 }
 ```
 
-The client needs no change: `useChat` already sends attachments to this route as data URLs.
+```tsx
+// app/page.tsx - a standard useChat page; files are sent as data URLs
+'use client';
+import { useChat } from '@ai-sdk/react';
+import { useState } from 'react';
 
-The same wrapped model works without a chat UI - background jobs, scripts, other APIs:
+export default function Chat() {
+  const { messages, sendMessage } = useChat();
+  const [files, setFiles] = useState<FileList | undefined>();
+  const [input, setInput] = useState('');
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); sendMessage({ text: input, files }); setInput(''); setFiles(undefined); }}>
+      {messages.map((m) => <div key={m.id}>{m.parts.map((p, i) => (p.type === 'text' ? <p key={i}>{p.text}</p> : null))}</div>)}
+      <input type="file" multiple onChange={(e) => setFiles(e.target.files ?? undefined)} />
+      <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask about your files" />
+    </form>
+  );
+}
+```
+
+</details>
+
+<details>
+<summary><b>Server-side, no UI</b> - summarize a file</summary>
 
 ```ts
 import { readFile } from 'node:fs/promises';
 import { generateText } from 'ai';
 
 const { text } = await generateText({
-  model, // the same wrapped model
+  model, // wrapped as above
   experimental_download: noServerDownloads,
   messages: [{
     role: 'user',
@@ -85,6 +144,92 @@ const { text } = await generateText({
   }],
 });
 ```
+
+</details>
+
+<details>
+<summary><b>Structured extraction</b> - typed JSON from a spreadsheet, scan or PDF</summary>
+
+```ts
+import { generateText, jsonSchema, Output } from 'ai';
+
+const { output } = await generateText({
+  model,
+  output: Output.object({
+    schema: jsonSchema<{ figures: { label: string; period: string; value: number }[] }>({
+      type: 'object',
+      required: ['figures'],
+      properties: {
+        figures: {
+          type: 'array',
+          items: {
+            type: 'object',
+            required: ['label', 'period', 'value'],
+            properties: { label: { type: 'string' }, period: { type: 'string' }, value: { type: 'number' } },
+          },
+        },
+      },
+    }),
+  }),
+  messages: [{ role: 'user', content: [
+    { type: 'text', text: 'Extract every reported figure.' },
+    { type: 'file', data: await readFile('q2.xlsx'), filename: 'q2.xlsx',
+      mediaType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
+  ] }],
+});
+```
+
+</details>
+
+<details>
+<summary><b>Separate vision model</b> - main model sees text only</summary>
+
+```ts
+const model = wrapLanguageModel({
+  model: openai('gpt-5'),
+  middleware: doclingAttachments({
+    url: process.env.DOCLING_URL!,
+    apiKey: process.env.DOCLING_API_KEY,
+    visionModel: openai('gpt-5-mini'),
+  }),
+});
+```
+
+</details>
+
+<details>
+<summary><b>Plain Node server</b> - the chat endpoint without a framework</summary>
+
+```ts
+import { createServer } from 'node:http';
+
+createServer(async (req, res) => {
+  let body = '';
+  for await (const chunk of req) body += chunk;
+  const { messages } = JSON.parse(body);
+  streamText({ model, messages: await convertToModelMessages(messages), experimental_download: noServerDownloads })
+    .pipeUIMessageStreamToResponse(res);
+}).listen(3000);
+```
+
+</details>
+
+<details>
+<summary><b>Without an LLM</b> - parse to Markdown for search or storage</summary>
+
+```ts
+import { convertWithDocling, doclingToBlocks } from 'ai-sdk-docling';
+
+const { doc, score } = await convertWithDocling(await readFile('scan.pdf'), 'scan.pdf', {
+  url: 'http://localhost:5001',
+  apiKey: process.env.DOCLING_API_KEY,
+  timeoutMs: 600_000,
+  options: { to_formats: 'json', image_export_mode: 'embedded', ocr_preset: 'rapidocr' },
+});
+const markdown = doclingToBlocks(doc).map((b) => (b.type === 'text' ? b.text : '[image]')).join('\n\n');
+```
+
+</details>
 
 ## How it works
 
@@ -442,27 +587,18 @@ doesn't either), sanitizes file names, and never shows internal errors to the mo
   docling did (0.15 vs 0.04 text error).
 - Audio, video and email are out of scope (the model gets a note).
 
-## Development
+## Contributing
 
-```
-src/      the package: middleware, docling-serve client, document -> blocks, cache
-test/     unit (offline) and integration (live docling-serve, optional OpenAI) tests, with fixtures
-server/   the docling-serve image (release + LibreOffice + per-page confidence patch)
-bench/    benchmark scripts and charts; see bench/README.md
-docs/     the parser comparison and chart images
-```
+Issues and pull requests are welcome - see [CONTRIBUTING.md](CONTRIBUTING.md) for setup, tests, commit style and
+how to benchmark routing changes. Please report security issues privately ([SECURITY.md](SECURITY.md)). This
+project follows a [code of conduct](CODE_OF_CONDUCT.md); changes are listed in [CHANGELOG.md](CHANGELOG.md).
 
-```bash
-npm install
-npm run typecheck
-npm test                                        # offline
-dotenvx run -- npm run test:integration         # needs docling-serve; OPENAI_API_KEY adds one real call
-npm run build                                   # dist/, what is published
-```
+## Acknowledgements
 
-Tests run TypeScript directly with Node's type stripping (Node 22.18+ / 24); the published package is compiled
-JavaScript with type declarations and runs on Node 20+.
+Built on [docling](https://github.com/docling-project/docling) and
+[docling-serve](https://github.com/docling-project/docling-serve), the [Vercel AI SDK](https://ai-sdk.dev), and
+evaluated with [OmniDocBench](https://github.com/opendatalab/OmniDocBench).
 
 ## License
 
-MIT
+[MIT](LICENSE)
