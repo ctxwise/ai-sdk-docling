@@ -43,7 +43,17 @@ doclingAttachments({ ...base, pdf: 'pages', images: 'pages' });
 doclingAttachments({ ...base, minConfidence: 0, maxImages: 0 });
 doclingAttachments({ ...base, pdf: 'native', images: 'native' });
 doclingAttachments({ ...base, nativeTypes: ['image/png', 'image/jpeg', 'image/webp', 'image/gif'] });
-doclingAttachments({ ...base, visionModel: openai('gpt-5-mini') });
+
+// Choosing models: separate vision model, main model sees text only
+const twoModels = wrapLanguageModel({
+  model: openai('gpt-5'),
+  middleware: doclingAttachments({
+    url: process.env.DOCLING_URL!,
+    apiKey: process.env.DOCLING_API_KEY,
+    visionModel: openai('gpt-5-mini'),
+  }),
+});
+streamText({ model: twoModels, messages: [] });
 
 // Configuration
 doclingAttachments({
