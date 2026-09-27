@@ -51,7 +51,7 @@
     "@ai-sdk/provider": "^4.0.18",
     "@biomejs/biome": "2.5.14",
     "@types/node": "^22.20.4",
-    "ai": "^7.0.113",
+    "ai": "^7.0.117",
     "typescript": "^7.0.2"
   },
   "repository": {
