@@ -28,6 +28,10 @@ test('supported types are configurable', async () => {
   assert.match(textOf(noOffice), /can't be read/, 'removed from doclingTypes -> not parsed');
 });
 
+test('a missing url fails at setup, not on the first file', () => {
+  assert.throws(() => doclingAttachments({ url: process.env.UNSET_DOCLING_URL! }), /`url` \(the docling-serve address\) is required/);
+});
+
 test('explicit undefined keeps the default', async () => {
   const parts = await sent(user(file('formats.md', 'text/plain')), { ...offline, maxTextChars: undefined });
   assert.match(textOf(parts), /# Notes/);

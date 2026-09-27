@@ -131,6 +131,7 @@ function mergeText(parts: Part[]): Part[] {
 
 /** AI SDK middleware: every attachment in a user message becomes something the model can read. */
 export function doclingAttachments(options: DoclingAttachmentsOptions): LanguageModelV4Middleware {
+  if (!options.url) throw new TypeError('doclingAttachments: `url` (the docling-serve address) is required');
   // explicit `undefined` (e.g. from an unset env var) keeps the default
   const opts = { ...DEFAULTS, ...(Object.fromEntries(Object.entries(options).filter(([, v]) => v !== undefined)) as DoclingAttachmentsOptions) };
   const { url, apiKey, pdf, images, minConfidence, imageDetail, maxFileBytes, maxPages, maxTextChars, timeoutMs } = opts;
