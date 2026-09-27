@@ -12,7 +12,7 @@
     "noEmit": true,
     "types": ["node"],
     "paths": {
-      "ai-sdk-docling": ["./src/index.ts"]
+      "@ctxwise/ai-sdk-docling": ["./src/index.ts"]
     }
   },
   "include": ["src", "test", "examples", "bench/scripts"]

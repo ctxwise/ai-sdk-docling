@@ -1,7 +1,13 @@
 // Tuning: limits, supported file types, docling options, error reporting. Every default is in DEFAULTS.
 import { openai } from '@ai-sdk/openai';
+import {
+  DEFAULTS,
+  DOCLING_TYPES,
+  doclingAttachments,
+  isPlainTextType,
+  OPENAI_NATIVE_TYPES,
+} from '@ctxwise/ai-sdk-docling';
 import { wrapLanguageModel } from 'ai';
-import { DEFAULTS, DOCLING_TYPES, doclingAttachments, isPlainTextType, OPENAI_NATIVE_TYPES } from 'ai-sdk-docling';
 
 export const model = wrapLanguageModel({
   model: openai('gpt-5-mini'),

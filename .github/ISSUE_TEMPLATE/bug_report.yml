@@ -31,8 +31,8 @@ body:
     id: versions
     attributes:
       label: Versions
-      description: ai-sdk-docling, ai, the provider package, docling-serve image, Node.
-      placeholder: ai-sdk-docling 0.1.0, ai 7.0.113, @ai-sdk/openai 4.0.1, docling-serve v1.35.0, Node 24
+      description: "@ctxwise/ai-sdk-docling, ai, the provider package, docling-serve image, Node."
+      placeholder: "@ctxwise/ai-sdk-docling 0.1.1, ai 7.0.117, @ai-sdk/openai 4.0.78, docling-serve v1.35.0, Node 24"
     validations:
       required: true
   - type: textarea

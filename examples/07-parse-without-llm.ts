@@ -3,7 +3,7 @@
 // Run: dotenvx run -- node examples/07-parse-without-llm.ts test/fixtures/scan.pdf
 import { readFile } from 'node:fs/promises';
 import { basename } from 'node:path';
-import { convertWithDocling, doclingToBlocks } from 'ai-sdk-docling';
+import { convertWithDocling, doclingToBlocks } from '@ctxwise/ai-sdk-docling';
 
 const path = process.argv[2] ?? 'test/fixtures/scan.pdf';
 
@@ -19,7 +19,7 @@ const { doc, pageScores, score } = await convertWithDocling(await readFile(path)
   },
 });
 
-console.log(`confidence ${score?.toFixed(2)}; per page:`, Object.fromEntries(pageScores));
+console.log(`confidence ${score?.toFixed(2) ?? 'n/a (office files have none)'}; per page:`, Object.fromEntries(pageScores));
 for (const block of doclingToBlocks(doc)) {
   console.log(block.type === 'text' ? block.text : `[image ${block.mediaType}${block.cls ? `, ${block.cls}` : ''}]`);
 }

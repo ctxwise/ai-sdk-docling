@@ -1,8 +1,8 @@
 // Next.js App Router: app/api/chat/route.ts. The client is a normal `useChat` page (see README); attachments
 // arrive as data URLs and are parsed here, before the model sees them.
 import { openai } from '@ai-sdk/openai';
+import { doclingAttachments, noServerDownloads } from '@ctxwise/ai-sdk-docling';
 import { convertToModelMessages, streamText, type UIMessage, wrapLanguageModel } from 'ai';
-import { doclingAttachments, noServerDownloads } from 'ai-sdk-docling';
 
 // module scope: one middleware (and one parse cache) for all requests
 const model = wrapLanguageModel({

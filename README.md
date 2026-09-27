@@ -6,7 +6,7 @@
 Vercel AI SDK middleware that parses PDFs, scans, Office files and images with docling,<br/>
 and sends the vision model only what OCR can't read.
 
-[![npm](https://img.shields.io/npm/v/ai-sdk-docling?color=2a78d6)](https://www.npmjs.com/package/ai-sdk-docling)
+[![npm](https://img.shields.io/npm/v/@ctxwise/ai-sdk-docling?color=2a78d6)](https://www.npmjs.com/package/@ctxwise/ai-sdk-docling)
 [![CI](https://github.com/uditkumar01/ai-sdk-docling/actions/workflows/ci.yml/badge.svg)](https://github.com/uditkumar01/ai-sdk-docling/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2a78d6)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-2a78d6)](package.json)
@@ -43,7 +43,7 @@ and sends the vision model only what OCR can't read.
 **1. Install**
 
 ```bash
-npm install ai-sdk-docling   # peer dependencies: ai@7, @ai-sdk/provider@4
+npm install @ctxwise/ai-sdk-docling   # peer dependencies: ai@7, @ai-sdk/provider@4
 ```
 
 **2. Start docling-serve** (the image in this repository: the official release plus LibreOffice and per-page
@@ -61,7 +61,7 @@ you'd use the plain model - `streamText`, `generateText`, a `useChat` route:
 ```ts
 import { openai } from '@ai-sdk/openai';
 import { wrapLanguageModel } from 'ai';
-import { doclingAttachments } from 'ai-sdk-docling';
+import { doclingAttachments } from '@ctxwise/ai-sdk-docling';
 
 export const model = wrapLanguageModel({
   model: openai('gpt-5-mini'),
@@ -83,7 +83,7 @@ Runnable, type-checked examples live in [examples/](examples/README.md). The mos
 // app/api/chat/route.ts
 import { openai } from '@ai-sdk/openai';
 import { convertToModelMessages, streamText, wrapLanguageModel, type UIMessage } from 'ai';
-import { doclingAttachments, noServerDownloads } from 'ai-sdk-docling';
+import { doclingAttachments, noServerDownloads } from '@ctxwise/ai-sdk-docling';
 
 const model = wrapLanguageModel({
   model: openai('gpt-5-mini'),
@@ -218,7 +218,7 @@ createServer(async (req, res) => {
 <summary><b>Without an LLM</b> - parse to Markdown for search or storage</summary>
 
 ```ts
-import { convertWithDocling, doclingToBlocks } from 'ai-sdk-docling';
+import { convertWithDocling, doclingToBlocks } from '@ctxwise/ai-sdk-docling';
 
 const { doc, score } = await convertWithDocling(await readFile('scan.pdf'), 'scan.pdf', {
   url: 'http://localhost:5001',
@@ -394,7 +394,7 @@ Every default is exported as `DEFAULTS`, and the type tables as `DOCLING_TYPES`,
 `isPlainTextType`, so they can be extended rather than copied:
 
 ```ts
-import { DOCLING_TYPES, doclingAttachments, isPlainTextType, OPENAI_NATIVE_TYPES } from 'ai-sdk-docling';
+import { DOCLING_TYPES, doclingAttachments, isPlainTextType, OPENAI_NATIVE_TYPES } from '@ctxwise/ai-sdk-docling';
 
 doclingAttachments({
   ...base,

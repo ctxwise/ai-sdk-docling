@@ -2,8 +2,8 @@
 // Run: dotenvx run -- node examples/03-node-http-server.ts   then POST { messages } to http://localhost:3000
 import { createServer } from 'node:http';
 import { openai } from '@ai-sdk/openai';
+import { doclingAttachments, noServerDownloads } from '@ctxwise/ai-sdk-docling';
 import { convertToModelMessages, streamText, type UIMessage, wrapLanguageModel } from 'ai';
-import { doclingAttachments, noServerDownloads } from 'ai-sdk-docling';
 
 const model = wrapLanguageModel({
   model: openai('gpt-5-mini'),

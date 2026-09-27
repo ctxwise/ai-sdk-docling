@@ -3,8 +3,8 @@
 import { readFile } from 'node:fs/promises';
 import { basename } from 'node:path';
 import { openai } from '@ai-sdk/openai';
+import { DOCLING_TYPES, doclingAttachments, noServerDownloads } from '@ctxwise/ai-sdk-docling';
 import { generateText, wrapLanguageModel } from 'ai';
-import { DOCLING_TYPES, doclingAttachments, noServerDownloads } from 'ai-sdk-docling';
 
 const path = process.argv[2] ?? 'test/fixtures/report.docx';
 // media type from the extension, using the package's own table (text/plain for anything else)

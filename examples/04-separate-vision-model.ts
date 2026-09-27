@@ -4,8 +4,8 @@
 import { readFile } from 'node:fs/promises';
 import { basename } from 'node:path';
 import { openai } from '@ai-sdk/openai';
+import { doclingAttachments, noServerDownloads } from '@ctxwise/ai-sdk-docling';
 import { streamText, wrapLanguageModel } from 'ai';
-import { doclingAttachments, noServerDownloads } from 'ai-sdk-docling';
 
 const path = process.argv[2] ?? 'test/fixtures/mixed.pdf';
 

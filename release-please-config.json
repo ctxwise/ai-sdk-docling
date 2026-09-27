@@ -3,7 +3,7 @@
   "packages": {
     ".": {
       "release-type": "node",
-      "package-name": "ai-sdk-docling",
+      "package-name": "@ctxwise/ai-sdk-docling",
       "include-component-in-tag": false,
       "bump-minor-pre-major": true,
       "changelog-sections": [
