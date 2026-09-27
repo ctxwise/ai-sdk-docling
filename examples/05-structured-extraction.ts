@@ -7,7 +7,8 @@ import { generateText, jsonSchema, Output, wrapLanguageModel } from 'ai';
 import { DOCLING_TYPES, doclingAttachments, noServerDownloads } from 'ai-sdk-docling';
 
 const path = process.argv[2] ?? 'test/fixtures/rich.xlsx';
-const mediaType = Object.entries(DOCLING_TYPES).find(([, ext]) => path.toLowerCase().endsWith(`.${ext}`))?.[0] ?? 'text/plain';
+const mediaType =
+  Object.entries(DOCLING_TYPES).find(([, ext]) => path.toLowerCase().endsWith(`.${ext}`))?.[0] ?? 'text/plain';
 
 interface Report {
   title: string;
@@ -17,7 +18,10 @@ interface Report {
 
 const model = wrapLanguageModel({
   model: openai('gpt-5-mini'),
-  middleware: doclingAttachments({ url: process.env.DOCLING_URL ?? 'http://localhost:5001', apiKey: process.env.DOCLING_API_KEY }),
+  middleware: doclingAttachments({
+    url: process.env.DOCLING_URL ?? 'http://localhost:5001',
+    apiKey: process.env.DOCLING_API_KEY,
+  }),
 });
 
 const { output } = await generateText({
@@ -43,13 +47,15 @@ const { output } = await generateText({
       },
     }),
   }),
-  messages: [{
-    role: 'user',
-    content: [
-      { type: 'text', text: 'Extract every reported figure from this document.' },
-      { type: 'file', data: await readFile(path), filename: basename(path), mediaType },
-    ],
-  }],
+  messages: [
+    {
+      role: 'user',
+      content: [
+        { type: 'text', text: 'Extract every reported figure from this document.' },
+        { type: 'file', data: await readFile(path), filename: basename(path), mediaType },
+      ],
+    },
+  ],
 });
 
 console.table(output.figures);

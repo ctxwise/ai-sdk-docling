@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
-import { generateText, wrapLanguageModel, type ModelMessage } from 'ai';
+import { generateText, type ModelMessage, wrapLanguageModel } from 'ai';
 import { MockLanguageModelV4 } from 'ai/test';
-import { doclingAttachments, type DoclingAttachmentsOptions } from '../src/index.ts';
+import { type DoclingAttachmentsOptions, doclingAttachments } from '../src/index.ts';
 
 export const DOCLING_URL = process.env.DOCLING_URL ?? 'http://localhost:5001';
 export const DOCLING_KEY = process.env.DOCLING_API_KEY;
@@ -20,7 +20,10 @@ export const fixtureJson = (f: string) => JSON.parse(fixture(f).toString('utf8')
 export const mockResult = (text: string): any => ({
   content: [{ type: 'text', text }],
   finishReason: { unified: 'stop', raw: 'stop' },
-  usage: { inputTokens: { total: 1, noCache: 1, cacheRead: 0, cacheWrite: 0 }, outputTokens: { total: 1, text: 1, reasoning: 0 } },
+  usage: {
+    inputTokens: { total: 1, noCache: 1, cacheRead: 0, cacheWrite: 0 },
+    outputTokens: { total: 1, text: 1, reasoning: 0 },
+  },
   warnings: [],
 });
 
@@ -36,9 +39,20 @@ export async function sent(messages: ModelMessage[], opts: Partial<DoclingAttach
   return model.doGenerateCalls[0].prompt.find((m) => m.role === 'user')!.content as any[];
 }
 
-export const user = (...content: any[]): ModelMessage[] => [{ role: 'user', content: [{ type: 'text', text: 'What is in this?' }, ...content] }];
-export const file = (f: string, mediaType: string) => ({ type: 'file' as const, data: fixture(f), mediaType, filename: f });
-export const textOf = (parts: any[]) => parts.filter((p) => p.type === 'text').map((p) => p.text).join('\n');
+export const user = (...content: any[]): ModelMessage[] => [
+  { role: 'user', content: [{ type: 'text', text: 'What is in this?' }, ...content] },
+];
+export const file = (f: string, mediaType: string) => ({
+  type: 'file' as const,
+  data: fixture(f),
+  mediaType,
+  filename: f,
+});
+export const textOf = (parts: any[]) =>
+  parts
+    .filter((p) => p.type === 'text')
+    .map((p) => p.text)
+    .join('\n');
 export const imagesOf = (parts: any[]) => parts.filter((p) => p.type === 'file' && p.mediaType.startsWith('image/'));
 export const typesOf = (parts: any[]) => parts.map((p) => p.mediaType ?? p.type);
 /** whether a file part's data (base64 string or bytes) is exactly the fixture */

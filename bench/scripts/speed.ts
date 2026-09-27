@@ -7,8 +7,16 @@ import { convertWithDocling } from '../../src/index.ts';
 import { DATA, DOCLING } from './common.ts';
 
 const label = process.argv[2] ?? 'local';
-const base = { to_formats: 'json', image_export_mode: 'embedded', ocr_preset: 'rapidocr', do_picture_classification: 'true' };
-const combos: Record<string, Record<string, string>> = { 'all-pages': { include_page_images: 'true' }, 'on-demand': {} };
+const base = {
+  to_formats: 'json',
+  image_export_mode: 'embedded',
+  ocr_preset: 'rapidocr',
+  do_picture_classification: 'true',
+};
+const combos: Record<string, Record<string, string>> = {
+  'all-pages': { include_page_images: 'true' },
+  'on-demand': {},
+};
 const files: Record<string, number> = { 'docling-paper.pdf': 9, 'scan.pdf': 2 }; // name -> pages
 
 const runs: Record<string, Record<string, { seconds: number[]; mb: number[] }>> = {};
@@ -16,10 +24,16 @@ for (let rep = 0; rep < 4; rep++) {
   for (const f of Object.keys(files)) {
     for (const [combo, extra] of Object.entries(combos)) {
       const bytes = readFileSync(`test/fixtures/${f}`);
-      const { response } = await convertWithDocling(bytes, f, { ...DOCLING, timeoutMs: 900_000, options: { ...base, ...extra } });
+      const { response } = await convertWithDocling(bytes, f, {
+        ...DOCLING,
+        timeoutMs: 900_000,
+        options: { ...base, ...extra },
+      });
       if (rep === 0) continue; // warm-up
-      const r = ((runs[f] ??= {})[combo] ??= { seconds: [], mb: [] });
-      r.seconds.push(response.processing_time);
+      runs[f] ??= {};
+      runs[f][combo] ??= { seconds: [], mb: [] };
+      const r = runs[f][combo];
+      r.seconds.push(response.processing_time ?? Number.NaN);
       r.mb.push(JSON.stringify(response).length / 2 ** 20);
     }
   }
@@ -31,7 +45,9 @@ for (const [f, byCombo] of Object.entries(runs)) {
   out[f] = { pages: files[f] };
   for (const [combo, r] of Object.entries(byCombo)) {
     out[f][combo] = { seconds: median(r.seconds), mb: median(r.mb), runs: r.seconds };
-    console.log(`${label} ${f.padEnd(18)} ${combo}  ${median(r.seconds).toFixed(1)}s  ${(median(r.seconds) / files[f]).toFixed(1)}s/page  ${median(r.mb).toFixed(1)} MB`);
+    console.log(
+      `${label} ${f.padEnd(18)} ${combo}  ${median(r.seconds).toFixed(1)}s  ${(median(r.seconds) / files[f]).toFixed(1)}s/page  ${median(r.mb).toFixed(1)} MB`,
+    );
   }
 }
 writeFileSync(`${DATA}/speed-${label}.json`, JSON.stringify(out, null, 1));

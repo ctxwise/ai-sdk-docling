@@ -2,11 +2,28 @@
 // OPENAI_API_KEY set = also one real OpenAI round trip.
 import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
-import { convertToModelMessages, generateText, wrapLanguageModel, type ModelMessage } from 'ai';
+import { convertToModelMessages, generateText, type ModelMessage, wrapLanguageModel } from 'ai';
 import { doclingAttachments } from '../../src/index.ts';
-import { DOCLING_KEY, DOCLING_URL, file, fixture, imagesOf, mockModel, mockResult, sameBytes, sent, T, textOf, typesOf, user } from '../helpers.ts';
+import {
+  DOCLING_KEY,
+  DOCLING_URL,
+  file,
+  fixture,
+  imagesOf,
+  mockModel,
+  mockResult,
+  sameBytes,
+  sent,
+  T,
+  textOf,
+  typesOf,
+  user,
+} from '../helpers.ts';
 
-const up = await fetch(`${DOCLING_URL}/health`).then((r) => r.ok, () => false);
+const up = await fetch(`${DOCLING_URL}/health`).then(
+  (r) => r.ok,
+  () => false,
+);
 const docling = { url: DOCLING_URL, apiKey: DOCLING_KEY };
 
 // counts docling conversions to prove caching
@@ -36,9 +53,17 @@ describe('with docling-serve', { skip: !up && `docling-serve not reachable at ${
 
   test('useChat path: FileUIPart data URL -> convertToModelMessages -> middleware', async () => {
     const url = `data:${T.docx};base64,${fixture('report.docx').toString('base64')}`;
-    const parts = await sent(await convertToModelMessages([
-      { role: 'user', parts: [{ type: 'text', text: 'Read this' }, { type: 'file', mediaType: T.docx, filename: 'report.docx', url }] },
-    ]));
+    const parts = await sent(
+      await convertToModelMessages([
+        {
+          role: 'user',
+          parts: [
+            { type: 'text', text: 'Read this' },
+            { type: 'file', mediaType: T.docx, filename: 'report.docx', url },
+          ],
+        },
+      ]),
+    );
     assert.match(textOf(parts), /Revenue grew 12%/);
     assert.equal(imagesOf(parts).length, 1);
   });
@@ -75,7 +100,10 @@ describe('with docling-serve', { skip: !up && `docling-serve not reachable at ${
     assert.deepEqual(typesOf(parts), ['text', 'text', 'application/pdf', 'text']);
     assert.match(textOf(parts), /<document name="scan\.pdf" confidence="0\.\d\d">/);
     assert.ok(sameBytes(parts[2].data.data, 'scan.pdf'));
-    parts = await sent(user(file('scan.pdf', T.pdf)), { minConfidence: Infinity, nativeTypes: ['image/png', 'image/jpeg'] });
+    parts = await sent(user(file('scan.pdf', T.pdf)), {
+      minConfidence: Infinity,
+      nativeTypes: ['image/png', 'image/jpeg'],
+    });
     assert.match(textOf(parts), /\[page 1\][\s\S]*\[page 2\]/);
     assert.equal(imagesOf(parts).length, 2);
   });
@@ -94,7 +122,11 @@ describe('with docling-serve', { skip: !up && `docling-serve not reachable at ${
     assert.ok(!imagesOf(parts).some((p) => sameBytes(p.data.data, 'newspaper.jpg')), 'confident: no original');
     assert.ok(textOf(parts).length > 3000);
     parts = await sent(user(file('newspaper.jpg', 'image/jpeg')), { minConfidence: Infinity });
-    assert.equal(imagesOf(parts).filter((p) => sameBytes(p.data.data, 'newspaper.jpg')).length, 1, 'low: original image');
+    assert.equal(
+      imagesOf(parts).filter((p) => sameBytes(p.data.data, 'newspaper.jpg')).length,
+      1,
+      'low: original image',
+    );
     for (const minConfidence of [0.8, 0]) {
       parts = await sent(user(file('person.png', 'image/png')), { minConfidence });
       assert.equal(imagesOf(parts).length, 1);
@@ -120,19 +152,33 @@ describe('with docling-serve', { skip: !up && `docling-serve not reachable at ${
   test('formats: rtf odt epub adoc doc xls ppt tiff bmp; misleading names fixed', async () => {
     const read = async (f: string, t: string) => {
       const parts = await sent(user(file(f, t)));
-      assert.ok(parts.every((p) => p.type === 'text' || ['image/png', 'image/jpeg', 'application/pdf'].includes(p.mediaType)), `${t}: only model-readable parts`);
+      assert.ok(
+        parts.every((p) => p.type === 'text' || ['image/png', 'image/jpeg', 'application/pdf'].includes(p.mediaType)),
+        `${t}: only model-readable parts`,
+      );
       return parts;
     };
-    for (const [f, t] of [['formats.rtf', 'application/rtf'], ['formats.odt', 'application/vnd.oasis.opendocument.text'], ['formats.epub', 'application/epub+zip'], ['formats.adoc', 'text/asciidoc']]) {
+    for (const [f, t] of [
+      ['formats.rtf', 'application/rtf'],
+      ['formats.odt', 'application/vnd.oasis.opendocument.text'],
+      ['formats.epub', 'application/epub+zip'],
+      ['formats.adoc', 'text/asciidoc'],
+    ]) {
       assert.match(textOf(await read(f, t)), /EU sales were 1\.9M/, t);
     }
     assert.match(textOf(await read('legacy-table.doc', 'application/msword')), /\|EU\|1\.9M\|/);
     assert.match(textOf(await read('legacy.xls', 'application/vnd.ms-excel')), /\|EU\|100\|120\|[\s\S]*\|Rent\|50\|/);
     const ppt = await read('legacy.ppt', 'application/vnd.ms-powerpoint');
     assert.ok(/Team/.test(textOf(ppt)) && imagesOf(ppt).length === 1);
-    assert.deepEqual(imagesOf(await read('formats.tiff', 'image/tiff')).map((p) => p.mediaType), ['image/png', 'image/png'], 'tiff page -> png');
+    assert.deepEqual(
+      imagesOf(await read('formats.tiff', 'image/tiff')).map((p) => p.mediaType),
+      ['image/png', 'image/png'],
+      'tiff page -> png',
+    );
     assert.equal(imagesOf(await read('formats.bmp', 'image/bmp'))[0].mediaType, 'image/png');
-    const renamed = await sent(user({ type: 'file', data: fixture('report.docx'), mediaType: T.docx, filename: 'notes.txt' }));
+    const renamed = await sent(
+      user({ type: 'file', data: fixture('report.docx'), mediaType: T.docx, filename: 'notes.txt' }),
+    );
     assert.match(textOf(renamed), /<document name="notes\.docx">[\s\S]*Revenue grew 12%/);
     const unnamed = await sent(user({ type: 'file', data: fixture('report.docx'), mediaType: T.docx }));
     assert.match(textOf(unnamed), /<document name="attachment\.docx">/);
@@ -148,7 +194,11 @@ describe('with docling-serve', { skip: !up && `docling-serve not reachable at ${
     const turn = (middleware: ReturnType<typeof doclingAttachments>, messages: ModelMessage[]) =>
       generateText({ model: wrapLanguageModel({ model: mockModel(), middleware }), messages });
     const mw = doclingAttachments(docling);
-    const history: ModelMessage[] = [...user(file('report.docx', T.docx)), { role: 'assistant', content: 'A report.' }, { role: 'user', content: 'Who is pictured?' }];
+    const history: ModelMessage[] = [
+      ...user(file('report.docx', T.docx)),
+      { role: 'assistant', content: 'A report.' },
+      { role: 'user', content: 'Who is pictured?' },
+    ];
     let start = doclingCalls;
     for (let i = 0; i < 2; i++) await turn(mw, history);
     assert.equal(doclingCalls - start, 1, 'second turn from cache');
@@ -162,11 +212,19 @@ describe('with docling-serve', { skip: !up && `docling-serve not reachable at ${
 
   test('visionModel: images become text, main model gets text only, cached', async () => {
     let visionCalls = 0;
-    const vision = mockModel({ doGenerate: async () => (visionCalls++, mockResult('TRANSCRIBED BY VISION')) });
+    const vision = mockModel({
+      doGenerate: async () => {
+        visionCalls++;
+        return mockResult('TRANSCRIBED BY VISION');
+      },
+    });
     const mw = doclingAttachments({ ...docling, visionModel: vision });
     for (let i = 0; i < 2; i++) {
       const main = mockModel();
-      await generateText({ model: wrapLanguageModel({ model: main, middleware: mw }), messages: user(file('person.png', 'image/png'), file('mixed.pdf', T.pdf)) });
+      await generateText({
+        model: wrapLanguageModel({ model: main, middleware: mw }),
+        messages: user(file('person.png', 'image/png'), file('mixed.pdf', T.pdf)),
+      });
       const parts = main.doGenerateCalls[0].prompt.find((m) => m.role === 'user')!.content as any[];
       assert.ok(parts.every((p) => p.type === 'text'));
       assert.equal(textOf(parts).match(/TRANSCRIBED BY VISION/g)?.length, 2, 'photo + low page');
@@ -177,8 +235,19 @@ describe('with docling-serve', { skip: !up && `docling-serve not reachable at ${
   test('OpenAI end to end', { skip: !process.env.OPENAI_API_KEY && 'no OPENAI_API_KEY' }, async () => {
     const { openai } = await import('@ai-sdk/openai');
     const { text } = await generateText({
-      model: wrapLanguageModel({ model: openai(process.env.OPENAI_MODEL ?? 'gpt-5-mini'), middleware: doclingAttachments(docling) }),
-      messages: [{ role: 'user', content: [{ type: 'text', text: 'Give the EU sales figure from this report. One line.' }, file('report.docx', T.docx)] }],
+      model: wrapLanguageModel({
+        model: openai(process.env.OPENAI_MODEL ?? 'gpt-5-mini'),
+        middleware: doclingAttachments(docling),
+      }),
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'Give the EU sales figure from this report. One line.' },
+            file('report.docx', T.docx),
+          ],
+        },
+      ],
     });
     assert.match(text, /1\.9\s*M/);
   });

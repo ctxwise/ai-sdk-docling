@@ -11,7 +11,8 @@ const minConfidence = Number(process.argv[2] ?? DEFAULTS.minConfidence);
 const dir = (m: string) => `${DATA}/pred/${m}`;
 const [pagesOut, defaultOut] = [predDir('pages'), predDir('default')];
 
-let hints = 0, low = 0;
+let hints = 0,
+  low = 0;
 const names = pages();
 for (const name of names) {
   const { confidence, doc } = JSON.parse(readFileSync(`${DATA}/docling-json/${name}.json`, 'utf8'));
@@ -23,4 +24,6 @@ for (const name of names) {
   hints += +!!hint;
   low += +(score < minConfidence);
 }
-console.log(`pages: ${hints}/${names.length} with a docling hint; default: ${low}/${names.length} pages below ${minConfidence} sent to the LLM`);
+console.log(
+  `pages: ${hints}/${names.length} with a docling hint; default: ${low}/${names.length} pages below ${minConfidence} sent to the LLM`,
+);

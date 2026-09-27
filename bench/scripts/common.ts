@@ -5,7 +5,8 @@ export const DATA = 'bench/data';
 export const DOCLING = { url: process.env.DOCLING_URL ?? 'http://localhost:5001', apiKey: process.env.DOCLING_API_KEY };
 
 /** benchmark page image names (data/hard.txt, from select_pages.py) */
-export const pages = (list = `${DATA}/hard.txt`) => readFileSync(list, 'utf8').replace(/^﻿/, '').split(/\r?\n/).filter(Boolean);
+export const pages = (list = `${DATA}/hard.txt`) =>
+  readFileSync(list, 'utf8').replace(/^﻿/, '').split(/\r?\n/).filter(Boolean);
 export const pageImage = (name: string) => readFileSync(`${DATA}/OmniDocBench/images/${name}`);
 export const stem = (name: string) => name.replace(/\.\w+$/, '');
 
@@ -25,11 +26,14 @@ export async function pool<T>(items: T[], concurrency: number, fn: (item: T) => 
   const queue = [...items];
   const t0 = Date.now();
   let done = 0;
-  await Promise.all(Array.from({ length: concurrency }, async () => {
-    while (queue.length) {
-      await fn(queue.shift()!);
-      if (++done % 10 === 0) console.log(`${done}/${items.length}  ${((Date.now() - t0) / 1000 / done).toFixed(1)}s/item`);
-    }
-  }));
+  await Promise.all(
+    Array.from({ length: concurrency }, async () => {
+      while (queue.length) {
+        await fn(queue.shift()!);
+        if (++done % 10 === 0)
+          console.log(`${done}/${items.length}  ${((Date.now() - t0) / 1000 / done).toFixed(1)}s/item`);
+      }
+    }),
+  );
   console.log(`${done} done in ${((Date.now() - t0) / 60000).toFixed(1)} min`);
 }

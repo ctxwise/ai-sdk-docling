@@ -11,7 +11,12 @@ const { doc, pageScores, score } = await convertWithDocling(await readFile(path)
   url: process.env.DOCLING_URL ?? 'http://localhost:5001',
   apiKey: process.env.DOCLING_API_KEY,
   timeoutMs: 600_000,
-  options: { to_formats: 'json', image_export_mode: 'embedded', ocr_preset: 'rapidocr', do_picture_classification: 'true' },
+  options: {
+    to_formats: 'json',
+    image_export_mode: 'embedded',
+    ocr_preset: 'rapidocr',
+    do_picture_classification: 'true',
+  },
 });
 
 console.log(`confidence ${score?.toFixed(2)}; per page:`, Object.fromEntries(pageScores));

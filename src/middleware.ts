@@ -1,7 +1,15 @@
 import { createHash } from 'node:crypto';
 import type { LanguageModelV4FilePart, LanguageModelV4Middleware, LanguageModelV4TextPart } from '@ai-sdk/provider';
-import { generateText, type Experimental_DownloadFunction, type LanguageModel } from 'ai';
-import { BLOCK_DEFAULTS, doclingToBlocks, fmtScore, pageBlocks, PHOTO, type Block, type BlockOptions } from './blocks.ts';
+import { type Experimental_DownloadFunction, generateText, type LanguageModel } from 'ai';
+import {
+  BLOCK_DEFAULTS,
+  type Block,
+  type BlockOptions,
+  doclingToBlocks,
+  fmtScore,
+  PHOTO,
+  pageBlocks,
+} from './blocks.ts';
 import { PromiseCache } from './cache.ts';
 import { convertWithDocling } from './docling.ts';
 import { DOCLING_TYPES, isPlainTextType, OPENAI_NATIVE_TYPES, safeName } from './media.ts';
@@ -117,13 +125,14 @@ class AttachmentError extends Error {}
 
 const PDF = 'application/pdf';
 const isImage = (t: string) => t.startsWith('image/');
-const sha256 = (...data: (string | Uint8Array)[]) => data.reduce((h, d) => h.update(d), createHash('sha256')).digest('hex');
+const sha256 = (...data: (string | Uint8Array)[]) =>
+  data.reduce((h, d) => h.update(d), createHash('sha256')).digest('hex');
 
 /** merges adjacent text parts (fewer parts, same content); copies them so cached parts are never mutated */
 function mergeText(parts: Part[]): Part[] {
   return parts.reduce<Part[]>((acc, p) => {
     const last = acc.at(-1);
-    if (p.type === 'text' && last?.type === 'text') last.text += '\n' + p.text;
+    if (p.type === 'text' && last?.type === 'text') last.text += `\n${p.text}`;
     else acc.push(p.type === 'text' ? { ...p } : p);
     return acc;
   }, []);
@@ -133,8 +142,12 @@ function mergeText(parts: Part[]): Part[] {
 export function doclingAttachments(options: DoclingAttachmentsOptions): LanguageModelV4Middleware {
   if (!options.url) throw new TypeError('doclingAttachments: `url` (the docling-serve address) is required');
   // explicit `undefined` (e.g. from an unset env var) keeps the default
-  const opts = { ...DEFAULTS, ...(Object.fromEntries(Object.entries(options).filter(([, v]) => v !== undefined)) as DoclingAttachmentsOptions) };
-  const { url, apiKey, pdf, images, minConfidence, imageDetail, maxFileBytes, maxPages, maxTextChars, timeoutMs } = opts;
+  const opts = {
+    ...DEFAULTS,
+    ...(Object.fromEntries(Object.entries(options).filter(([, v]) => v !== undefined)) as DoclingAttachmentsOptions),
+  };
+  const { url, apiKey, pdf, images, minConfidence, imageDetail, maxFileBytes, maxPages, maxTextChars, timeoutMs } =
+    opts;
   const { doclingTypes, plainTextTypes, fetchUrls, visionModel, visionPrompt } = opts;
   const onError = opts.onError ?? ((e, name) => console.warn(`[ai-sdk-docling] ${name}:`, e));
   const native = new Set(opts.nativeTypes);
@@ -145,14 +158,16 @@ export function doclingAttachments(options: DoclingAttachmentsOptions): Language
     parts.reduce((n, p) => {
       const d = p.type === 'text' ? p.text : p.data.type === 'data' ? p.data.data : '';
       return n + (typeof d === 'string' ? d.length : d.byteLength);
-    }, 0));
+    }, 0),
+  );
   const visionCache = new PromiseCache<string>(1000); // vision text is small: an entry count is enough
 
   // PDFs/images go through docling when a mode asks for it, or always when the model can't take them
   const viaDocling = (t: string) =>
     !!doclingTypes[t] && (!native.has(t) || (t === PDF && pdf !== 'native') || (isImage(t) && images !== 'native'));
   // images the model can't take (tiff, bmp) are always sent as rendered page images
-  const pageMode = (t: string) => (t === PDF && pdf === 'pages') || (isImage(t) && (images === 'pages' || !native.has(t)));
+  const pageMode = (t: string) =>
+    (t === PDF && pdf === 'pages') || (isImage(t) && (images === 'pages' || !native.has(t)));
 
   /** file bytes, or null when the part should be left for the provider (remote URL / provider reference) */
   async function bytesOf(part: LanguageModelV4FilePart): Promise<Buffer | null> {
@@ -160,15 +175,19 @@ export function doclingAttachments(options: DoclingAttachmentsOptions): Language
     let bytes: Buffer | null = null;
     if (d.type === 'data') bytes = typeof d.data === 'string' ? Buffer.from(d.data, 'base64') : Buffer.from(d.data);
     else if (d.type === 'text') bytes = Buffer.from(d.text, 'utf8');
-    else if (d.type === 'url' && d.url.protocol === 'data:') bytes = Buffer.from(d.url.href.slice(d.url.href.indexOf(',') + 1), 'base64');
+    else if (d.type === 'url' && d.url.protocol === 'data:')
+      bytes = Buffer.from(d.url.href.slice(d.url.href.indexOf(',') + 1), 'base64');
     else if (d.type === 'url' && fetchUrls && /^https?:$/.test(d.url.protocol)) {
       const r = await fetch(d.url, { signal: AbortSignal.timeout(timeoutMs) });
       if (!r.ok) throw new Error(`download ${d.url} -> HTTP ${r.status}`);
-      if (Number(r.headers.get('content-length')) > maxFileBytes) throw new AttachmentError('the file is too large to read');
+      if (Number(r.headers.get('content-length')) > maxFileBytes)
+        throw new AttachmentError('the file is too large to read');
       bytes = Buffer.from(await r.arrayBuffer());
     }
     if (bytes && bytes.length > maxFileBytes) {
-      throw new AttachmentError(`the file is too large to read (${(bytes.length / 2 ** 20).toFixed(0)} MB, limit ${(maxFileBytes / 2 ** 20).toFixed(0)} MB)`);
+      throw new AttachmentError(
+        `the file is too large to read (${(bytes.length / 2 ** 20).toFixed(0)} MB, limit ${(maxFileBytes / 2 ** 20).toFixed(0)} MB)`,
+      );
     }
     return bytes;
   }
@@ -180,7 +199,9 @@ export function doclingAttachments(options: DoclingAttachmentsOptions): Language
     // page mode renders pages (except a native image, sent as-is); the PDF fallback needs renders of low pages
     const needsPageImages = (pages && !(image && native.has(mediaType))) || (fallback && !image);
     const { doc, pageScores, score } = await convertWithDocling(bytes, filename, {
-      url, apiKey, timeoutMs,
+      url,
+      apiKey,
+      timeoutMs,
       options: {
         to_formats: 'json',
         image_export_mode: 'embedded',
@@ -194,7 +215,10 @@ export function doclingAttachments(options: DoclingAttachmentsOptions): Language
       },
     });
 
-    const open = { type: 'text' as const, text: `<document name="${filename}"${score === undefined ? '' : ` confidence="${fmtScore(score)}"`}>` };
+    const open = {
+      type: 'text' as const,
+      text: `<document name="${filename}"${score === undefined ? '' : ` confidence="${fmtScore(score)}"`}>`,
+    };
     const close = { type: 'text' as const, text: '</document>' };
     const lowPages = [...pageScores].filter(([, s]) => s < minConfidence).map(([n]) => n);
     const empty = !(doc.texts?.length || doc.pictures?.length || doc.tables?.length);
@@ -204,13 +228,15 @@ export function doclingAttachments(options: DoclingAttachmentsOptions): Language
       blocks = pageBlocks(doc, { ...opts, imagePages: new Set(lowPages), scores: pageScores });
     } else if ((fallback && (score ?? 1) < minConfidence) || (empty && (image || mediaType === PDF))) {
       // low confidence, or nothing extracted: the model reads the original (PDF: its own text layer + page images)
-      if (native.has(mediaType) && !image) return [open, { type: 'file', mediaType, filename, data: { type: 'data', data: bytes } }, close];
+      if (native.has(mediaType) && !image)
+        return [open, { type: 'file', mediaType, filename, data: { type: 'data', data: bytes } }, close];
       pages = true;
     }
     const original = image && native.has(mediaType) ? { mediaType, base64: bytes.toString('base64') } : undefined;
     blocks ??= pages ? pageBlocks(doc, { ...opts, original }) : doclingToBlocks(doc, opts);
     const cut = !image && Object.keys(doc.pages ?? {}).length >= maxPages;
-    if (cut) blocks.push({ type: 'text', text: `[only the first ${maxPages} pages were read; the document may continue]` });
+    if (cut)
+      blocks.push({ type: 'text', text: `[only the first ${maxPages} pages were read; the document may continue]` });
     return mergeText([open, ...blocks.map(toPart), close]);
   }
 
@@ -218,7 +244,12 @@ export function doclingAttachments(options: DoclingAttachmentsOptions): Language
     if (b.type === 'text') return b;
     // reduced detail only where fine detail doesn't matter; charts, tables and pages stay readable
     const low = b.cls && PHOTO.has(b.cls);
-    return { type: 'file', mediaType: b.mediaType, data: { type: 'data', data: b.base64 }, ...(low && { providerOptions: { openai: { imageDetail } } }) };
+    return {
+      type: 'file',
+      mediaType: b.mediaType,
+      data: { type: 'data', data: b.base64 },
+      ...(low && { providerOptions: { openai: { imageDetail } } }),
+    };
   }
 
   async function viaParser(part: LanguageModelV4FilePart): Promise<Part[]> {
@@ -234,27 +265,40 @@ export function doclingAttachments(options: DoclingAttachmentsOptions): Language
     if (!bytes) return [part];
     const text = bytes.toString('utf8');
     const cut = text.length > maxTextChars ? `\n[cut after ${maxTextChars} characters; the file continues]` : '';
-    return [{ type: 'text', text: `<document name="${name(part)}">\n${text.slice(0, maxTextChars)}${cut}\n</document>` }];
+    return [
+      { type: 'text', text: `<document name="${name(part)}">\n${text.slice(0, maxTextChars)}${cut}\n</document>` },
+    ];
   }
 
   /** visionModel set: images/PDFs become text from the vision model; the main model gets text only */
   async function viaVisionModel(parts: Part[]): Promise<Part[]> {
     if (!visionModel) return parts;
-    const out = await Promise.all(parts.map(async (p): Promise<Part> => {
-      if (p.type !== 'file' || p.data.type !== 'data' || !(isImage(p.mediaType) || p.mediaType === PDF)) return p;
-      const data = p.data.data;
-      try {
-        const text = await visionCache.get(sha256(data), () =>
-          generateText({
-            model: visionModel,
-            messages: [{ role: 'user', content: [{ type: 'text', text: visionPrompt }, { type: 'file', mediaType: p.mediaType, data }] }],
-          }).then((r) => r.text.trim()));
-        return { type: 'text', text: `<vision-model-transcription>\n${text}\n</vision-model-transcription>` };
-      } catch (e) {
-        onError(e, p.filename ?? p.mediaType);
-        return { type: 'text', text: '[image: the vision model could not read it]' };
-      }
-    }));
+    const out = await Promise.all(
+      parts.map(async (p): Promise<Part> => {
+        if (p.type !== 'file' || p.data.type !== 'data' || !(isImage(p.mediaType) || p.mediaType === PDF)) return p;
+        const data = p.data.data;
+        try {
+          const text = await visionCache.get(sha256(data), () =>
+            generateText({
+              model: visionModel,
+              messages: [
+                {
+                  role: 'user',
+                  content: [
+                    { type: 'text', text: visionPrompt },
+                    { type: 'file', mediaType: p.mediaType, data },
+                  ],
+                },
+              ],
+            }).then((r) => r.text.trim()),
+          );
+          return { type: 'text', text: `<vision-model-transcription>\n${text}\n</vision-model-transcription>` };
+        } catch (e) {
+          onError(e, p.filename ?? p.mediaType);
+          return { type: 'text', text: '[image: the vision model could not read it]' };
+        }
+      }),
+    );
     return mergeText(out);
   }
 
@@ -285,7 +329,10 @@ export function doclingAttachments(options: DoclingAttachmentsOptions): Language
       prompt: await Promise.all(
         params.prompt.map(async (msg) =>
           msg.role === 'user'
-            ? { ...msg, content: (await Promise.all(msg.content.map(async (p) => viaVisionModel(await route(p))))).flat() }
+            ? {
+                ...msg,
+                content: (await Promise.all(msg.content.map(async (p) => viaVisionModel(await route(p))))).flat(),
+              }
             : msg,
         ),
       ),

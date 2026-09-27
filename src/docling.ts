@@ -50,6 +50,22 @@ export interface DoclingRequest {
   options: Record<string, string | string[]>;
 }
 
+/** Confidence scores (0-1) docling-serve returns; `pages` comes from this project's docling image. */
+export interface DoclingConfidence {
+  low_score?: number | null;
+  mean_score?: number | null;
+  pages?: Record<string, { low_score?: number | null; mean_score?: number | null }>;
+}
+
+/** The docling-serve result response (`/v1/result/{task_id}`), as far as this package reads it. */
+export interface DoclingResponse {
+  status: string;
+  errors?: unknown[];
+  processing_time?: number;
+  confidence?: DoclingConfidence;
+  document: { json_content: DoclingDocument; md_content?: string | null };
+}
+
 export interface DoclingResult {
   doc: DoclingDocument;
   /** per-page confidence (docling `low_score`, 0-1); empty when the server doesn't return page scores */
@@ -57,11 +73,15 @@ export interface DoclingResult {
   /** worst page score, or docling's document score when page scores are missing */
   score?: number;
   /** the full docling-serve response (markdown, timings, ...) */
-  response: any;
+  response: DoclingResponse;
 }
 
 /** Converts one file with docling-serve's async API (no server-side sync-wait limit for long documents). */
-export async function convertWithDocling(bytes: Uint8Array, filename: string, req: DoclingRequest): Promise<DoclingResult> {
+export async function convertWithDocling(
+  bytes: Uint8Array,
+  filename: string,
+  req: DoclingRequest,
+): Promise<DoclingResult> {
   const form = new FormData();
   form.append('files', new Blob([new Uint8Array(bytes)]), filename);
   for (const [k, v] of Object.entries(req.options)) for (const x of [v].flat()) form.append(k, x);
@@ -79,14 +99,14 @@ export async function convertWithDocling(bytes: Uint8Array, filename: string, re
     task = await call(`/v1/status/poll/${task.task_id}?wait=5`);
   }
   if (task.task_status === 'failure') throw new Error(`docling task failed: ${task.error_message ?? 'unknown'}`);
-  const response = await call(`/v1/result/${task.task_id}`);
+  const response: DoclingResponse = await call(`/v1/result/${task.task_id}`);
   if (response.status !== 'success' && response.status !== 'partial_success') {
     throw new Error(`docling status ${response.status}: ${JSON.stringify(response.errors).slice(0, 300)}`);
   }
 
   // per-page scores come from our docling image's patch (server/patch_page_confidence.py)
   const pageScores = new Map<number, number>();
-  for (const [page, s] of Object.entries<any>(response.confidence?.pages ?? {})) {
+  for (const [page, s] of Object.entries(response.confidence?.pages ?? {})) {
     if (typeof s?.low_score === 'number') pageScores.set(Number(page), s.low_score);
   }
   const score = pageScores.size ? Math.min(...pageScores.values()) : (response.confidence?.low_score ?? undefined);

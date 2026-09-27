@@ -3,10 +3,15 @@ Runs in docker/pymupdf.Dockerfile with bench/data at /data and test/fixtures at 
 usage: python pymupdf.py [--ocr tesseract|rapidocr] [--office]
   pages  -> /data/pred/pymupdf-<ocr>/<page>.md
   office -> /data/office/pymupdf4llm-rich.<ext>.md"""
-import argparse, os, time
-from concurrent.futures import ProcessPoolExecutor
 
-import pymupdf, pymupdf4llm
+import argparse
+import os
+import time
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import pymupdf
+import pymupdf4llm
 
 args = argparse.ArgumentParser()
 args.add_argument("--ocr", choices=["tesseract", "rapidocr"], default="rapidocr")
@@ -18,6 +23,7 @@ OUT = f"/data/pred/pymupdf-{args.ocr}"
 def to_markdown(doc):
     if args.ocr == "rapidocr":  # the same OCR engine as docling
         from pymupdf4llm.ocr.rapidocr_api import exec_ocr
+
         return pymupdf4llm.to_markdown(doc, ocr_function=exec_ocr)
     return pymupdf4llm.to_markdown(doc)  # default: Tesseract, English only
 
@@ -32,17 +38,19 @@ def page(img):
     except Exception as e:
         md = ""
         print("FAIL", img, e, flush=True)
-    open(out, "w", encoding="utf-8").write(md)
+    Path(out).write_text(md, encoding="utf-8")
     return time.time() - t
 
 
 if args.office:
     os.makedirs("/data/office", exist_ok=True)
     for ext in ["docx", "pptx", "xlsx"]:
-        open(f"/data/office/pymupdf4llm-rich.{ext}.md", "w", encoding="utf-8").write(pymupdf4llm.to_markdown(f"/fixtures/rich.{ext}"))
+        Path(f"/data/office/pymupdf4llm-rich.{ext}.md").write_text(
+            pymupdf4llm.to_markdown(f"/fixtures/rich.{ext}"), encoding="utf-8"
+        )
 else:
     os.makedirs(OUT, exist_ok=True)
-    imgs = [line for line in open("/data/hard.txt", encoding="utf-8").read().split("\n") if line]
+    imgs = [n for n in Path("/data/hard.txt").read_text(encoding="utf-8").splitlines() if n]
     t0 = time.time()
     with ProcessPoolExecutor(4) as ex:
         times = sorted(ex.map(page, imgs))

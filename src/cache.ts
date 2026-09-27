@@ -26,7 +26,10 @@ export class PromiseCache<V> {
         const size = this.#sizeOf(v);
         this.#sizes.set(key, size);
         this.#total += size;
-        while (this.#total > this.#budget && this.#entries.size > 1) this.#delete(this.#entries.keys().next().value!);
+        for (const oldest of this.#entries.keys()) {
+          if (this.#total <= this.#budget || this.#entries.size <= 1) break;
+          this.#delete(oldest);
+        }
       },
       () => this.#delete(key),
     );

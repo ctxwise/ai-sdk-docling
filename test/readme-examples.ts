@@ -2,7 +2,13 @@
 import { readFile } from 'node:fs/promises';
 import { openai } from '@ai-sdk/openai';
 import { convertToModelMessages, generateText, streamText, wrapLanguageModel } from 'ai';
-import { DOCLING_TYPES, doclingAttachments, isPlainTextType, noServerDownloads, OPENAI_NATIVE_TYPES } from '../src/index.ts';
+import {
+  DOCLING_TYPES,
+  doclingAttachments,
+  isPlainTextType,
+  noServerDownloads,
+  OPENAI_NATIVE_TYPES,
+} from '../src/index.ts';
 
 // Usage A: chat route
 const model = wrapLanguageModel({
@@ -24,14 +30,20 @@ export async function serverOnly() {
   const { text } = await generateText({
     model,
     experimental_download: noServerDownloads,
-    messages: [{
-      role: 'user',
-      content: [
-        { type: 'text', text: 'Summarize this contract and list every deadline.' },
-        { type: 'file', data: await readFile('contract.docx'), filename: 'contract.docx',
-          mediaType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' },
-      ],
-    }],
+    messages: [
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: 'Summarize this contract and list every deadline.' },
+          {
+            type: 'file',
+            data: await readFile('contract.docx'),
+            filename: 'contract.docx',
+            mediaType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          },
+        ],
+      },
+    ],
   });
   return text;
 }

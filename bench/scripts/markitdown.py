@@ -1,10 +1,16 @@
 """MarkItDown (optionally with its OCR plugin and gpt-5-mini) on the benchmark pages or the Office fixtures.
-Runs in docker/markitdown.Dockerfile with bench/data at /data and test/fixtures at /fixtures; --ocr needs OPENAI_API_KEY.
+Runs in docker/markitdown.Dockerfile with bench/data at /data and test/fixtures at /fixtures;
+--ocr needs OPENAI_API_KEY.
 usage: python markitdown.py [--ocr] [--office]
   pages  -> /data/pred/markitdown[-ocr]/<page>.md (each image wrapped in a PDF, as a chat upload would be)
   office -> /data/office/markitdown[-ocr]-rich.<ext>.md"""
-import argparse, os, threading, time
+
+import argparse
+import os
+import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 import pymupdf
 from markitdown import MarkItDown
@@ -43,23 +49,25 @@ def page(img):
         return 0
     t = time.time()
     pdf = f"/tmp/{os.path.splitext(img)[0]}.pdf"
-    open(pdf, "wb").write(pymupdf.open(f"/data/OmniDocBench/images/{img}").convert_to_pdf())
+    Path(pdf).write_bytes(pymupdf.open(f"/data/OmniDocBench/images/{img}").convert_to_pdf())
     try:
         text = md.convert(pdf).text_content
     except Exception as e:
         text = ""
         print("FAIL", img, repr(e)[:200], flush=True)
-    open(out, "w", encoding="utf-8").write(text)
+    Path(out).write_text(text, encoding="utf-8")
     return time.time() - t
 
 
 if args.office:
     os.makedirs("/data/office", exist_ok=True)
     for ext in ["docx", "pptx", "xlsx"]:
-        open(f"/data/office/{name}-rich.{ext}.md", "w", encoding="utf-8").write(md.convert(f"/fixtures/rich.{ext}").text_content)
+        Path(f"/data/office/{name}-rich.{ext}.md").write_text(
+            md.convert(f"/fixtures/rich.{ext}").text_content, encoding="utf-8"
+        )
 else:
     os.makedirs(f"/data/pred/{name}", exist_ok=True)
-    imgs = [line for line in open("/data/hard.txt", encoding="utf-8").read().split("\n") if line]
+    imgs = [n for n in Path("/data/hard.txt").read_text(encoding="utf-8").splitlines() if n]
     t0 = time.time()
     with ThreadPoolExecutor(6) as ex:
         times = sorted(ex.map(page, imgs))

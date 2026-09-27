@@ -28,6 +28,7 @@ export const model = wrapLanguageModel({
     doclingOptions: { ocr_lang: ['en', 'de'] },
 
     // parse failures: the model gets a generic note, your logs get the details
-    onError: (error, filename) => console.error(JSON.stringify({ event: 'attachment_failed', filename, error: String(error) })),
+    onError: (error, filename) =>
+      console.error(JSON.stringify({ event: 'attachment_failed', filename, error: String(error) })),
   }),
 });

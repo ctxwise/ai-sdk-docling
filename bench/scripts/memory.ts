@@ -10,7 +10,12 @@ const convert = (f: string) =>
   convertWithDocling(readFileSync(`test/fixtures/${f}`), f, {
     ...DOCLING,
     timeoutMs: 900_000,
-    options: { to_formats: 'json', image_export_mode: 'embedded', ocr_preset: 'rapidocr', do_picture_classification: 'true' },
+    options: {
+      to_formats: 'json',
+      image_export_mode: 'embedded',
+      ocr_preset: 'rapidocr',
+      do_picture_classification: 'true',
+    },
   });
 
 const phases: { name: string; start: number; end: number }[] = [];
@@ -23,7 +28,9 @@ async function phase(name: string, fn: () => Promise<unknown>) {
 await phase('idle', () => wait(20_000));
 await phase('1 PDF (9 pages)', () => convert('docling-paper.pdf'));
 await phase('idle 2', () => wait(15_000));
-await phase('4 docs at once', () => Promise.all(['docling-paper.pdf', 'scan.pdf', 'newspaper.jpg', 'report.docx'].map(convert)));
+await phase('4 docs at once', () =>
+  Promise.all(['docling-paper.pdf', 'scan.pdf', 'newspaper.jpg', 'report.docx'].map(convert)),
+);
 await phase('idle 3', () => wait(15_000));
 await phase('legacy .doc + .xls (LibreOffice)', () => Promise.all(['legacy-table.doc', 'legacy.xls'].map(convert)));
 await phase('idle 4', () => wait(15_000));

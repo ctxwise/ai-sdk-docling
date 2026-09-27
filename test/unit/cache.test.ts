@@ -5,7 +5,10 @@ import { PromiseCache } from '../../src/cache.ts';
 test('shares one computation per key, drops failures, evicts oldest over budget', async () => {
   const cache = new PromiseCache<string>(5, (v) => v.length);
   let calls = 0;
-  const compute = (v: string) => () => (calls++, Promise.resolve(v));
+  const compute = (v: string) => () => {
+    calls++;
+    return Promise.resolve(v);
+  };
   await Promise.all([cache.get('a', compute('aaa')), cache.get('a', compute('aaa'))]);
   assert.equal(calls, 1, 'concurrent requests share one computation');
 
@@ -22,7 +25,13 @@ test('shares one computation per key, drops failures, evicts oldest over budget'
 test('the newest entry is kept even when it alone is over budget', async () => {
   const cache = new PromiseCache<string>(1, (v) => v.length);
   let calls = 0;
-  await cache.get('big', () => (calls++, Promise.resolve('much too big')));
-  await cache.get('big', () => (calls++, Promise.resolve('much too big')));
+  await cache.get('big', () => {
+    calls++;
+    return Promise.resolve('much too big');
+  });
+  await cache.get('big', () => {
+    calls++;
+    return Promise.resolve('much too big');
+  });
   assert.equal(calls, 1);
 });
