@@ -5,7 +5,3 @@ dist/
 # secrets (dotenvx); .env.example is the template
 .env
 .env.keys
-
-# benchmark inputs, predictions and scores (bench/README.md shows how to recreate them)
-bench/data/
-__pycache__/
