@@ -16,7 +16,7 @@
     "llm"
   ],
   "license": "MIT",
-  "author": "Udit Kumar",
+  "author": "ctxwise",
   "type": "module",
   "exports": {
     ".": {
