@@ -97,5 +97,6 @@ version or the changelog by hand.
    `build:` and `revert:` the patch; a breaking change (`feat!:` or a `BREAKING CHANGE:` footer) the major - the
    minor while the version is below 1.0. `refactor`, `test`, `chore`, `ci` and `style` commits are left out of the
    changelog and never trigger a release on their own.
+   Nothing is approved or merged automatically: a maintainer reviews and merges the release pull request.
 3. Merging the release pull request tags `vX.Y.Z`, creates the GitHub release, and publishes to npm
    (`.github/workflows/release.yml`, once publishing is enabled).
