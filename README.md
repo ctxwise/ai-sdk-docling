@@ -13,7 +13,7 @@ and sends the vision model only what OCR can't read.
 [![AI SDK](https://img.shields.io/badge/AI%20SDK-v7-000000)](https://ai-sdk.dev)
 
 [Quick start](#quick-start) · [Examples](#examples) · [How it works](#how-it-works) · [Configuration](#configuration) ·
-[Benchmarks](#results) · [Comparison](https://github.com/ctxwise/ai-sdk-docling/blob/main/docs/COMPARISON.md) · [Contributing](https://github.com/ctxwise/ai-sdk-docling/blob/main/CONTRIBUTING.md)
+[Results](#results) · [Server](https://github.com/ctxwise/docling-serve) · [Contributing](https://github.com/ctxwise/ai-sdk-docling/blob/main/CONTRIBUTING.md)
 
 </div>
 
@@ -46,14 +46,15 @@ and sends the vision model only what OCR can't read.
 npm install @ctxwise/ai-sdk-docling   # peer dependencies: ai@7, @ai-sdk/provider@4
 ```
 
-**2. Start docling-serve** (the image in this repository: the official release plus LibreOffice and per-page
-confidence). Needs Docker and [dotenvx](https://dotenvx.com) for the key:
+**2. Start the docling server** - [ctxwise/docling-serve](https://github.com/ctxwise/docling-serve), docling-serve plus the endpoint this
+package calls. It never calls an LLM; its key only protects the server:
 
 ```bash
-cp .env.example .env
-dotenvx set DOCLING_API_KEY "$(openssl rand -hex 24)"
-dotenvx run -- docker compose up -d --build
+docker run -d -p 127.0.0.1:5001:5001 -e DOCLING_SERVE_API_KEY=<your key> \
+  -e DOCLING_SERVE_MAX_SYNC_WAIT=1800 ghcr.io/ctxwise/docling-serve:latest
 ```
+
+Sizing, scaling and production settings: [deployment guide](https://github.com/ctxwise/docling-serve/blob/main/ctxwise/README.md#deployment).
 
 **3. Wrap your model** once, at module scope (the parse cache is shared across requests), and use it anywhere
 you'd use the plain model - `streamText`, `generateText`, a `useChat` route:
@@ -219,15 +220,15 @@ createServer(async (req, res) => {
 <summary><b>Without an LLM</b> - parse to Markdown for search or storage</summary>
 
 ```ts
-import { convertWithDocling, doclingToBlocks } from '@ctxwise/ai-sdk-docling';
+import { convertWithDocling } from '@ctxwise/ai-sdk-docling';
 
-const { doc, score } = await convertWithDocling(await readFile('scan.pdf'), 'scan.pdf', {
-  url: 'http://localhost:5001',
+const { parts, confidence } = await convertWithDocling(await readFile('scan.pdf'), 'scan.pdf', {
+  url: 'http://127.0.0.1:5001',
   apiKey: process.env.DOCLING_API_KEY,
   timeoutMs: 600_000,
-  options: { to_formats: 'json', image_export_mode: 'embedded', ocr_preset: 'rapidocr' },
+  options: { minConfidence: 0 }, // text only, no page images
 });
-const markdown = doclingToBlocks(doc).map((b) => (b.type === 'text' ? b.text : '[image]')).join('\n\n');
+const markdown = parts.map((p) => (p.type === 'text' ? p.text : '[image]')).join('\n\n');
 ```
 
 </details>
@@ -299,12 +300,14 @@ When the main model is `gpt-5-mini`, don't set `visionModel`: it reads the image
 ## Presets
 
 ```ts
+import { doclingAttachments, Mode } from '@ctxwise/ai-sdk-docling';
+
 const base = { url: process.env.DOCLING_URL!, apiKey: process.env.DOCLING_API_KEY };
 
-doclingAttachments(base);                                        // hybrid (default)
-doclingAttachments({ ...base, pdf: 'pages', images: 'pages' });  // page mode
-doclingAttachments({ ...base, minConfidence: 0, maxImages: 0 }); // docling text only
-doclingAttachments({ ...base, pdf: 'native', images: 'native' }); // no docling for PDFs and images
+doclingAttachments(base);                                                // hybrid (default)
+doclingAttachments({ ...base, pdf: Mode.Pages, images: Mode.Pages });    // page mode
+doclingAttachments({ ...base, minConfidence: 0, maxImages: 0 });         // docling text only
+doclingAttachments({ ...base, pdf: Mode.Native, images: Mode.Native });  // no docling for PDFs and images
 ```
 
 | Preset | Text error | Reading order | Tables (TEDS) | Input tokens / page | Use when |
@@ -388,9 +391,10 @@ doclingAttachments({
 doclingAttachments({ ...base, nativeTypes: ['image/png', 'image/jpeg', 'image/webp', 'image/gif'] });
 ```
 
-`mediaTypeOf(filename)` gives the media type for files read on the server. The lower-level pieces are exported
-with TypeScript types: `convertWithDocling` (the docling-serve client),
-`doclingToBlocks`, `pageBlocks` and `pageText` (a DoclingDocument -> text and image blocks).
+Fixed values have named constants, so nothing is typed as a bare string: `Mode`, `ImageDetail`, `PictureClass`,
+`OcrPreset` and `TableMode` (e.g. `pdf: Mode.Pages`, `skipClasses: [PictureClass.Logo]`).
+`mediaTypeOf(filename)` gives the media type for files read on the server, and `convertWithDocling` is the typed
+docling-serve client for use without a model.
 
 ## Supported documents
 
@@ -407,7 +411,7 @@ with TypeScript types: `convertWithDocling` (the docling-serve client),
 | Plain text: `text/*`, JSON, XML, YAML, TOML, code | the text itself, up to `maxTextChars` |
 | Anything else (audio, video, email, archives) | a one-line note, so the request never fails |
 
-DOC, PPT, XLS and RTF go through LibreOffice, which the image in `server/` adds.
+DOC, PPT, XLS and RTF go through LibreOffice, which the docling server image includes.
 
 <details>
 <summary>What the model receives - real output for each type</summary>
@@ -496,63 +500,19 @@ the surrounding text carry the name, so they are always placed next to the image
 
 ## Results
 
-88 hard OmniDocBench pages (handwriting, tables, charts, irregular layouts, newspapers), read by `gpt-5-mini`.
-Full comparison with docling alone, PyMuPDF4LLM and MarkItDown: [docs/COMPARISON.md](https://github.com/ctxwise/ai-sdk-docling/blob/main/docs/COMPARISON.md).
+88 hard OmniDocBench pages (handwriting, tables, charts, irregular layouts, newspapers), read by `gpt-5-mini`:
+the default routing has the lowest text error (0.112) while sending 40% of pages to the model as images. Charts,
+per-page-type results, how the thresholds were chosen, and the comparison with PyMuPDF4LLM and MarkItDown are in
+the [server's quality report](https://github.com/ctxwise/docling-serve/blob/main/ctxwise/README.md#quality).
 
-![Parsing quality](https://raw.githubusercontent.com/ctxwise/ai-sdk-docling/main/docs/images/quality.png)
+## Running the docling server
 
-![Text error by page type](https://raw.githubusercontent.com/ctxwise/ai-sdk-docling/main/docs/images/by-page-type.png)
+The server is [ctxwise/docling-serve](https://github.com/ctxwise/docling-serve): CPU only, about 7 s per page on 4 vCPU / 16 GB. Its
+[deployment guide](https://github.com/ctxwise/docling-serve/blob/main/ctxwise/README.md#deployment) covers sizing, scaling out behind a load balancer, timeouts and security.
 
-Neither source wins everywhere - docling is best on clean and dense print, vision on handwriting and layouts.
-Routing by confidence takes the better one per page.
-
-![Cost vs quality](https://raw.githubusercontent.com/ctxwise/ai-sdk-docling/main/docs/images/cost-vs-quality.png)
-
-<details>
-<summary>How the thresholds were chosen</summary>
-
-![Confidence threshold](https://raw.githubusercontent.com/ctxwise/ai-sdk-docling/main/docs/images/confidence-threshold.png)
-
-Docling's `low_score` ranged 0.67-0.96 on these pages; all pages where docling failed scored 0.85 or lower.
-At 0.8, 40% of hard pages go to the model as images - clean documents score higher and stay text.
-
-![Hint threshold](https://raw.githubusercontent.com/ctxwise/ai-sdk-docling/main/docs/images/hint-threshold.png)
-
-In page mode, docling's text is added next to the image only on dense pages without tables. Anywhere between
-2,500 and 6,000 characters gives the same result.
-
-</details>
-
-## Deployment
-
-The image is the official docling-serve CPU release (`v1.35.0`) plus LibreOffice, with a build patch that returns
-docling's per-page confidence (docling computes it; docling-serve only returned the document score). No GPU needed.
-Size workers x threads to the machine's vCPUs with `DOCLING_WORKERS` and `DOCLING_THREADS`:
-
-| Server | Workers x threads | Speed (measured) | Memory, idle / peak (measured) |
-|---|---|---|---|
-| 4 vCPU / 16 GB | 2 x 2 (default) | ~7 s per page, 2 documents in parallel | 0.8 GB / 3.6 GB |
-| 2 vCPU / 8 GB | 1 x 2 | ~10 s per page, 1 document at a time | 0.8 GB / 2.7 GB |
-
-The first conversion adds about 1.5 GB, each further parallel conversion about 1 GB; between requests memory stays
-around 2 GB (the models stay loaded). Page images are rendered only when a page needs one, which cuts each response
-by 80%; plain-text files skip docling entirely.
-
-![Memory](https://raw.githubusercontent.com/ctxwise/ai-sdk-docling/main/docs/images/memory.png)
-
-![Speed](https://raw.githubusercontent.com/ctxwise/ai-sdk-docling/main/docs/images/speed.png)
-
-- **Avoid burstable CPU for steady traffic.** Sustained conversion drains CPU credits, after which a burstable
-  instance runs at a fraction of its vCPUs. Use unlimited-credit mode or a fixed-performance instance.
-- **ECS/Fargate:** build the image (`docker compose build`), push it to ECR, give the task the vCPU and memory
-  above, and pass `DOCLING_API_KEY` from Secrets Manager. Keep the service in a private subnet; only the app
-  should reach port 5001.
-- **More than one app instance:** the parse cache is in-process (`cacheMB`); move it to Redis or blob storage,
-  keyed by the same sha256, to share it.
-
-**Security:** docling requires the API key, listens on localhost only, makes no outbound calls, and caps file size,
-pages and queue length. The middleware never downloads user-supplied URLs (use `noServerDownloads` so the AI SDK
-doesn't either), sanitizes file names, and never shows internal errors to the model.
+On the app side: the parse cache is in-process (`cacheMB`); with several app instances, move it to Redis or blob
+storage keyed by the same sha256. The middleware never downloads user-supplied URLs (pass `noServerDownloads` so the
+AI SDK doesn't either), sanitizes file names, and never shows internal errors to the model.
 
 ## Limitations
 

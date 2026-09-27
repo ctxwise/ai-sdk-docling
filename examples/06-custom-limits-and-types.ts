@@ -3,23 +3,31 @@
  * Every option not set here keeps its default (see `DEFAULTS`).
  */
 import { openai } from '@ai-sdk/openai';
-import { DOCLING_TYPES, doclingAttachments, isPlainTextType, OPENAI_NATIVE_TYPES } from '@ctxwise/ai-sdk-docling';
+import {
+  DOCLING_TYPES,
+  doclingAttachments,
+  isPlainTextType,
+  Mode,
+  OPENAI_NATIVE_TYPES,
+  PictureClass,
+} from '@ctxwise/ai-sdk-docling';
 import { wrapLanguageModel } from 'ai';
 
 export const model = wrapLanguageModel({
   model: openai('gpt-5-mini'),
   middleware: doclingAttachments({
-    url: process.env.DOCLING_URL ?? 'http://localhost:5001',
+    url: process.env.DOCLING_URL ?? 'http://127.0.0.1:5001',
     apiKey: process.env.DOCLING_API_KEY,
 
     // 1. Limits: smaller files, fewer pages and pictures, a shorter deadline.
     maxFileBytes: 20 * 2 ** 20, // 20 MB
     maxPages: 30,
     maxImages: 5,
+    skipClasses: [PictureClass.Logo, PictureClass.Icon, PictureClass.QrCode],
     timeoutMs: 5 * 60_000, // 5 minutes per document
 
     // 2. Routing: PDFs page by page as images (best tables); images go to vision below 0.85 confidence.
-    pdf: 'pages',
+    pdf: Mode.Pages,
     minConfidence: 0.85,
 
     // 3. File types: pass audio to a model that reads it, read HTML as plain text, accept NDJSON.

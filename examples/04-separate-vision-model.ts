@@ -17,7 +17,7 @@ const path = process.argv[2] ?? 'test/fixtures/mixed.pdf';
 const model = wrapLanguageModel({
   model: openai('gpt-5'),
   middleware: doclingAttachments({
-    url: process.env.DOCLING_URL ?? 'http://localhost:5001',
+    url: process.env.DOCLING_URL ?? 'http://127.0.0.1:5001',
     apiKey: process.env.DOCLING_API_KEY,
     visionModel: openai('gpt-5-mini'),
     visionPrompt: 'Transcribe all text exactly and tables as Markdown. For charts, list every value.',
