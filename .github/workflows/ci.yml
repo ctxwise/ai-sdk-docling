@@ -13,7 +13,17 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - run: npx biome ci .
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
       - run: npm pack --dry-run
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/ruff-action@v4
+        with:
+          version: 0.16.9
+      - run: ruff check .
+      - run: ruff format --check .
