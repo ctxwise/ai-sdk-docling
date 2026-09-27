@@ -4,6 +4,25 @@ All notable changes to this project. Versions follow [Semantic Versioning](https
 generated from [Conventional Commits](https://www.conventionalcommits.org) by
 [release-please](https://github.com/googleapis/release-please) when a release pull request is merged.
 
+## [0.2.0](https://github.com/ctxwise/ai-sdk-docling/compare/v0.1.3...v0.2.0) (2026-09-27)
+
+
+### ⚠ BREAKING CHANGES
+
+* thin client for ctxwise/docling-serve's parts endpoint, with named constants for every fixed option
+
+### Features
+
+* mediaTypeOf helper for files read on the server ([35f5228](https://github.com/ctxwise/ai-sdk-docling/commit/35f52283a4cd767020515bda25f7558877fc8def))
+* thin client for ctxwise/docling-serve's parts endpoint, with named constants for every fixed option ([a3a49ef](https://github.com/ctxwise/ai-sdk-docling/commit/a3a49efd409be0ac0b8c6613f91c31e5fd26cbda))
+
+
+### Documentation
+
+* examples and guides for the parts endpoint and named constants ([cfb45b6](https://github.com/ctxwise/ai-sdk-docling/commit/cfb45b68fe657ddf53ac65dba005ebe3461af1a5))
+* opendataloader-bench result in the readme ([35f795e](https://github.com/ctxwise/ai-sdk-docling/commit/35f795e700c12980ccdc25daf6849d0a72c0c298))
+* step-by-step comments in the examples ([d29d2a3](https://github.com/ctxwise/ai-sdk-docling/commit/d29d2a3e3b7480552f6e665ab8f4fa7f1157f894))
+
 ## [0.1.3](https://github.com/ctxwise/ai-sdk-docling/compare/v0.1.2...v0.1.3) (2026-09-27)
 
 
