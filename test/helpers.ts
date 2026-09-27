@@ -3,7 +3,7 @@ import { generateText, type ModelMessage, wrapLanguageModel } from 'ai';
 import { MockLanguageModelV4 } from 'ai/test';
 import { type DoclingAttachmentsOptions, doclingAttachments } from '../src/index.ts';
 
-export const DOCLING_URL = process.env.DOCLING_URL ?? 'http://localhost:5001';
+export const DOCLING_URL = process.env.DOCLING_URL ?? 'http://127.0.0.1:5001';
 export const DOCLING_KEY = process.env.DOCLING_API_KEY;
 
 export const T = {

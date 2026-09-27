@@ -1,114 +1,137 @@
-/** docling-serve client: upload one file, wait for the async task, return the document and its confidence. */
+/** Client for ctxwise/docling-serve: one request converts a file and returns LLM-ready parts. */
+import type { Mode, OcrPreset, PictureClass, TableMode } from './constants.ts';
 
-export interface DoclingRef {
-  $ref: string;
+/** A picture class docling knows today, or one it may add later. */
+type AnyPictureClass = PictureClass | (string & {});
+
+/** How the server turns a converted document into parts. Unset options use the server's defaults. */
+export interface PartsOptions {
+  /** 'docling': text and pictures, low-confidence pages as page images. 'pages': every page as an image. */
+  mode?: Exclude<Mode, 'native'>;
+  /** the model reads the original file, so the server may answer with a `source` part instead of page renders */
+  sourceReadable?: boolean;
+  /** pages below this docling confidence (0-1) go to the model as images; 0 = off. Server default 0.8 */
+  minConfidence?: number;
+  /** pages converted per document; the model is told when a document was cut. Server default 100 */
+  maxPages?: number;
+  /** page mode: pages with more text than this also get docling's text. Server default 3000 */
+  denseChars?: number;
+  /** page images per document; later pages go as text. Server default 20 */
+  maxPageImages?: number;
+  /** pictures per document; charts, diagrams and tables first, photos last. Server default 10 */
+  maxImages?: number;
+  /** picture classes never sent. Server default ['logo', 'icon'] */
+  skipClasses?: readonly AnyPictureClass[];
+  /** smaller pictures are dropped (px). Server default 48 */
+  minImagePx?: number;
+  /** text docling read inside a chart or diagram, sent next to it; 0 = off. Server default 600 */
+  pictureTextChars?: number;
 }
 
-/** The parts of a DoclingDocument item this package reads. */
-export interface DoclingItem {
-  self_ref: string;
-  parent?: DoclingRef;
-  children?: DoclingRef[];
-  content_layer?: string;
-  label?: string;
-  name?: string;
-  text?: string;
-  level?: number;
-  enumerated?: boolean;
-  prov?: { page_no: number }[];
-  captions?: DoclingRef[];
-  image?: { uri?: string; mimetype?: string; size?: { width: number; height: number } };
-  meta?: {
-    classification?: { predictions?: { class_name: string }[] };
-    tabular_chart?: { chart_data?: DoclingTableData };
-  } | null;
-  data?: DoclingTableData;
+export type DoclingPart =
+  | { type: 'text'; text: string }
+  /** base64 image; `page` is set on whole-page renders */
+  | { type: 'image'; mediaType: string; data: string; pictureClass?: AnyPictureClass; page?: number }
+  /** send the original file here: the model reads it better than docling did */
+  | { type: 'source' };
+
+export interface DoclingParts {
+  filename: string;
+  /** worst page score (0-1), or the document score; undefined for formats without one (Office files) */
+  confidence?: number;
+  /** page number -> confidence */
+  pageConfidence: Record<number, number>;
+  /** seconds docling spent converting */
+  processingTime: number;
+  parts: DoclingPart[];
 }
 
-export interface DoclingTableData {
-  grid?: { text?: string; column_header?: boolean }[][];
+/** POST /v1/convert/file/parts response, as sent by the server. */
+interface WireParts {
+  filename: string;
+  confidence: number | null;
+  page_confidence: Record<string, number>;
+  processing_time: number;
+  parts: (
+    | { type: 'text'; text: string }
+    | { type: 'image'; media_type: string; data: string; picture_class?: string | null; page?: number | null }
+    | { type: 'source' }
+  )[];
 }
 
-/** The parts of a DoclingDocument (docling-serve `json_content`) this package reads. */
-export interface DoclingDocument {
-  origin?: { mimetype?: string };
-  body?: { children?: DoclingRef[] };
-  texts?: DoclingItem[];
-  pictures?: DoclingItem[];
-  tables?: DoclingItem[];
-  groups?: DoclingItem[];
-  pages?: Record<string, { image?: { uri?: string } }>;
+/** docling-serve convert options, sent as form fields. The common ones are typed; any other docling option works too. */
+export interface DoclingOptions {
+  ocr_preset?: OcrPreset;
+  /** OCR languages as BCP-47 tags, in order of preference, e.g. ['en', 'de'] */
+  ocr_lang?: readonly string[];
+  table_mode?: TableMode;
+  [option: string]: string | readonly string[] | undefined;
 }
 
 export interface DoclingRequest {
-  /** docling-serve base url, e.g. http://localhost:5001 */
+  /** docling-serve base url, e.g. http://127.0.0.1:5001 */
   url: string;
   apiKey?: string;
-  /** overall deadline, including docling's queue */
+  /** deadline for the whole conversion */
   timeoutMs: number;
-  /** docling-serve convert options; array values are sent as repeated form fields */
-  options: Record<string, string | string[]>;
+  options?: PartsOptions;
+  doclingOptions?: DoclingOptions;
 }
 
-/** Confidence scores (0-1) docling-serve returns; `pages` comes from this project's docling image. */
-export interface DoclingConfidence {
-  low_score?: number | null;
-  mean_score?: number | null;
-  pages?: Record<string, { low_score?: number | null; mean_score?: number | null }>;
-}
+const QUERY_NAMES: Record<keyof PartsOptions, string> = {
+  mode: 'mode',
+  sourceReadable: 'source_readable',
+  minConfidence: 'min_confidence',
+  maxPages: 'max_pages',
+  denseChars: 'dense_chars',
+  maxPageImages: 'max_page_images',
+  maxImages: 'max_images',
+  skipClasses: 'skip_classes',
+  minImagePx: 'min_image_px',
+  pictureTextChars: 'picture_text_chars',
+};
 
-/** The docling-serve result response (`/v1/result/{task_id}`), as far as this package reads it. */
-export interface DoclingResponse {
-  status: string;
-  errors?: unknown[];
-  processing_time?: number;
-  confidence?: DoclingConfidence;
-  document: { json_content: DoclingDocument; md_content?: string | null };
-}
-
-export interface DoclingResult {
-  doc: DoclingDocument;
-  /** per-page confidence (docling `low_score`, 0-1); empty when the server doesn't return page scores */
-  pageScores: Map<number, number>;
-  /** worst page score, or docling's document score when page scores are missing */
-  score?: number;
-  /** the full docling-serve response (markdown, timings, ...) */
-  response: DoclingResponse;
-}
-
-/** Converts one file with docling-serve's async API (no server-side sync-wait limit for long documents). */
+/** Converts one file and returns its parts. */
 export async function convertWithDocling(
   bytes: Uint8Array,
   filename: string,
   req: DoclingRequest,
-): Promise<DoclingResult> {
+): Promise<DoclingParts> {
   const form = new FormData();
   form.append('files', new Blob([new Uint8Array(bytes)]), filename);
-  for (const [k, v] of Object.entries(req.options)) for (const x of [v].flat()) form.append(k, x);
+  for (const [key, value] of Object.entries(req.doclingOptions ?? {})) {
+    for (const v of [value ?? []].flat()) form.append(key, v);
+  }
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(req.options ?? {})) {
+    if (value === undefined) continue;
+    for (const v of [value].flat()) query.append(QUERY_NAMES[key as keyof PartsOptions], String(v));
+  }
 
-  const signal = AbortSignal.timeout(req.timeoutMs);
-  const headers = req.apiKey ? { 'x-api-key': req.apiKey } : undefined;
-  const call = async (path: string, init?: RequestInit) => {
-    const r = await fetch(`${req.url}${path}`, { headers, signal, ...init });
-    if (!r.ok) throw new Error(`docling HTTP ${r.status}: ${(await r.text()).slice(0, 300)}`);
-    return r.json();
+  const response = await fetch(`${req.url}/v1/convert/file/parts?${query}`, {
+    method: 'POST',
+    body: form,
+    headers: req.apiKey ? { 'x-api-key': req.apiKey } : undefined,
+    signal: AbortSignal.timeout(req.timeoutMs),
+  });
+  if (!response.ok) throw new Error(`docling HTTP ${response.status}: ${(await response.text()).slice(0, 300)}`);
+
+  const wire: WireParts = await response.json();
+  return {
+    filename: wire.filename,
+    confidence: wire.confidence ?? undefined,
+    pageConfidence: Object.fromEntries(Object.entries(wire.page_confidence).map(([n, s]) => [Number(n), s])),
+    processingTime: wire.processing_time,
+    parts: wire.parts.map((p) =>
+      p.type === 'image'
+        ? {
+            type: 'image',
+            mediaType: p.media_type,
+            data: p.data,
+            ...(p.picture_class && { pictureClass: p.picture_class }),
+            ...(p.page && { page: p.page }),
+          }
+        : p,
+    ),
   };
-
-  let task = await call('/v1/convert/file/async', { method: 'POST', body: form });
-  while (task.task_status !== 'success' && task.task_status !== 'failure') {
-    task = await call(`/v1/status/poll/${task.task_id}?wait=5`);
-  }
-  if (task.task_status === 'failure') throw new Error(`docling task failed: ${task.error_message ?? 'unknown'}`);
-  const response: DoclingResponse = await call(`/v1/result/${task.task_id}`);
-  if (response.status !== 'success' && response.status !== 'partial_success') {
-    throw new Error(`docling status ${response.status}: ${JSON.stringify(response.errors).slice(0, 300)}`);
-  }
-
-  // per-page scores come from our docling image's patch (server/patch_page_confidence.py)
-  const pageScores = new Map<number, number>();
-  for (const [page, s] of Object.entries(response.confidence?.pages ?? {})) {
-    if (typeof s?.low_score === 'number') pageScores.set(Number(page), s.low_score);
-  }
-  const score = pageScores.size ? Math.min(...pageScores.values()) : (response.confidence?.low_score ?? undefined);
-  return { doc: response.document.json_content, pageScores, score, response };
 }

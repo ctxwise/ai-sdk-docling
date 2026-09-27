@@ -1,62 +1,43 @@
 import { createHash } from 'node:crypto';
 import type { LanguageModelV4FilePart, LanguageModelV4Middleware, LanguageModelV4TextPart } from '@ai-sdk/provider';
 import { type Experimental_DownloadFunction, generateText, type LanguageModel } from 'ai';
-import {
-  BLOCK_DEFAULTS,
-  type Block,
-  type BlockOptions,
-  doclingToBlocks,
-  fmtScore,
-  PHOTO,
-  pageBlocks,
-} from './blocks.ts';
 import { PromiseCache } from './cache.ts';
-import { convertWithDocling } from './docling.ts';
+import { ImageDetail, Mode, OcrPreset, PictureClass } from './constants.ts';
+import { convertWithDocling, type DoclingOptions, type DoclingPart, type PartsOptions } from './docling.ts';
 import { DOCLING_TYPES, isPlainTextType, OPENAI_NATIVE_TYPES, safeName } from './media.ts';
 
 type Part = LanguageModelV4TextPart | LanguageModelV4FilePart;
-type Mode = 'native' | 'docling' | 'pages';
 
-export interface DoclingAttachmentsOptions extends Omit<BlockOptions, 'page'> {
-  /** docling-serve base url, e.g. http://localhost:5001 */
+/** Routing options the docling server applies; unset ones use the server's defaults (see PartsOptions). */
+type ServerOptions = Omit<PartsOptions, 'mode' | 'sourceReadable'>;
+
+export interface DoclingAttachmentsOptions extends ServerOptions {
+  /** docling-serve base url, e.g. http://127.0.0.1:5001 */
   url: string;
   /** docling-serve API key (DOCLING_SERVE_API_KEY on the server) */
   apiKey?: string;
 
   /**
    * How PDFs reach the model.
-   * - 'docling': docling text + extracted pictures; pages below `minConfidence` go to the model as page images.
-   * - 'pages': each page as an image, plus docling's text as a hint on dense pages without tables. Most tokens.
+   * - 'docling': docling text + pictures; pages below `minConfidence` go to the model as page images.
+   * - 'pages': each page as an image, plus docling's text on dense pages without tables. Most tokens.
    * - 'native': the provider reads the PDF itself. No docling, no wait.
    * @default 'docling'
    */
   pdf?: Mode;
   /**
    * How images reach the model.
-   * - 'docling': docling text (+ crops of real pictures inside the image); the image itself only when docling's
-   *   confidence < `minConfidence`.
-   * - 'pages': always the image, plus docling text as a hint on dense pages.
+   * - 'docling': docling text (+ crops of pictures inside the image); the image itself below `minConfidence`.
+   * - 'pages': always the image, plus docling's text on dense pages.
    * - 'native': images pass through unchanged.
    * @default 'docling'
    */
   images?: Mode;
-  /**
-   * Pages whose docling confidence (low_score, 0-1, covers OCR + layout) is below this go to the model as images.
-   * The score is shown to the model: `<document name=".." confidence="0.86">`. 0 = off.
-   * @default 0.8
-   */
-  minConfidence?: number;
-  /** page text length above which docling's text is sent next to a page image. @default 3000 */
-  denseChars?: number;
-  /** page images per document; later pages are sent as docling text only. @default 20 */
-  maxPageImages?: number;
-  /** OpenAI image detail for photos, signatures and stamps; charts, tables and pages always keep full detail. @default 'low' */
-  imageDetail?: 'low' | 'high' | 'auto';
+  /** OpenAI image detail for photos, signatures and stamps; charts, tables and pages keep full detail. @default 'low' */
+  imageDetail?: ImageDetail;
 
   /** larger files are not parsed (images/PDFs pass through, other files get a note). @default 52428800 (50 MB) */
   maxFileBytes?: number;
-  /** only the first N pages of a document are parsed; the model is told when it was cut. @default 100 */
-  maxPages?: number;
   /** plain-text attachments longer than this are cut, with a note. @default 200000 */
   maxTextChars?: number;
   /** deadline for one document, including docling's queue. @default 900000 (15 min) */
@@ -70,8 +51,8 @@ export interface DoclingAttachmentsOptions extends Omit<BlockOptions, 'page'> {
   doclingTypes?: Readonly<Record<string, string>>;
   /** media types read as plain text, no parser. @default isPlainTextType (text/*, json, xml, yaml, code) */
   plainTextTypes?: (mediaType: string) => boolean;
-  /** extra docling-serve convert options (e.g. `{ ocr_lang: ['en', 'de'] }`); override the middleware's own */
-  doclingOptions?: Record<string, string | string[]>;
+  /** docling-serve convert options, merged over the defaults (e.g. `{ ocr_lang: ['en', 'de'] }`) */
+  doclingOptions?: DoclingOptions;
 
   /**
    * Download http(s) file URLs on this server. Off by default: a URL in a user message would otherwise make
@@ -91,21 +72,20 @@ export interface DoclingAttachmentsOptions extends Omit<BlockOptions, 'page'> {
   onError?: (error: unknown, filename: string) => void;
 }
 
-/** Every option's default, for reference or to derive your own values (e.g. `DEFAULTS.maxPages * 2`). */
+/** Defaults of the options this package applies; routing defaults live on the docling server. */
 export const DEFAULTS = {
-  ...BLOCK_DEFAULTS,
-  pdf: 'docling',
-  images: 'docling',
-  minConfidence: 0.8,
-  imageDetail: 'low',
+  pdf: Mode.Docling,
+  images: Mode.Docling,
+  imageDetail: ImageDetail.Low,
   maxFileBytes: 50 * 2 ** 20,
-  maxPages: 100,
   maxTextChars: 200_000,
   timeoutMs: 900_000,
   cacheMB: 256,
   nativeTypes: OPENAI_NATIVE_TYPES,
   doclingTypes: DOCLING_TYPES,
   plainTextTypes: isPlainTextType,
+  // ONNX PP-OCR: lighter and faster than EasyOCR; pinned so an upstream default change can't swap engines
+  doclingOptions: { ocr_preset: OcrPreset.RapidOcr },
   fetchUrls: false,
   visionPrompt:
     'Convert this image to text for another AI that cannot see it. Transcribe all text exactly, including handwriting; ' +
@@ -124,9 +104,14 @@ export const noServerDownloads: Experimental_DownloadFunction = async (files) =>
 class AttachmentError extends Error {}
 
 const PDF = 'application/pdf';
+// picture classes where reduced image detail loses nothing important
+const LOW_DETAIL_CLASSES = new Set<string>([PictureClass.Photograph, PictureClass.Signature, PictureClass.Stamp]);
+
 const isImage = (t: string) => t.startsWith('image/');
 const sha256 = (...data: (string | Uint8Array)[]) =>
   data.reduce((h, d) => h.update(d), createHash('sha256')).digest('hex');
+/** scores are shown rounded down, so 0.796 reads 0.79 and never looks like it passed a 0.8 threshold */
+const fmtScore = (s: number) => (Math.floor(s * 100) / 100).toFixed(2);
 
 /** merges adjacent text parts (fewer parts, same content); copies them so cached parts are never mutated */
 function mergeText(parts: Part[]): Part[] {
@@ -142,13 +127,22 @@ function mergeText(parts: Part[]): Part[] {
 export function doclingAttachments(options: DoclingAttachmentsOptions): LanguageModelV4Middleware {
   if (!options.url) throw new TypeError('doclingAttachments: `url` (the docling-serve address) is required');
   // explicit `undefined` (e.g. from an unset env var) keeps the default
-  const opts = {
-    ...DEFAULTS,
-    ...(Object.fromEntries(Object.entries(options).filter(([, v]) => v !== undefined)) as DoclingAttachmentsOptions),
-  };
-  const { url, apiKey, pdf, images, minConfidence, imageDetail, maxFileBytes, maxPages, maxTextChars, timeoutMs } =
-    opts;
+  const set = Object.fromEntries(
+    Object.entries(options).filter(([, v]) => v !== undefined),
+  ) as DoclingAttachmentsOptions;
+  const opts = { ...DEFAULTS, ...set, doclingOptions: { ...DEFAULTS.doclingOptions, ...set.doclingOptions } };
+  const { url, apiKey, pdf, images, imageDetail, maxFileBytes, maxTextChars, timeoutMs } = opts;
   const { doclingTypes, plainTextTypes, fetchUrls, visionModel, visionPrompt } = opts;
+  const serverOptions: ServerOptions = {
+    minConfidence: opts.minConfidence,
+    maxPages: opts.maxPages,
+    denseChars: opts.denseChars,
+    maxPageImages: opts.maxPageImages,
+    maxImages: opts.maxImages,
+    skipClasses: opts.skipClasses,
+    minImagePx: opts.minImagePx,
+    pictureTextChars: opts.pictureTextChars,
+  };
   const onError = opts.onError ?? ((e, name) => console.warn(`[ai-sdk-docling] ${name}:`, e));
   const native = new Set(opts.nativeTypes);
   const name = (p: LanguageModelV4FilePart) => safeName(p.filename, p.mediaType, doclingTypes);
@@ -164,10 +158,11 @@ export function doclingAttachments(options: DoclingAttachmentsOptions): Language
 
   // PDFs/images go through docling when a mode asks for it, or always when the model can't take them
   const viaDocling = (t: string) =>
-    !!doclingTypes[t] && (!native.has(t) || (t === PDF && pdf !== 'native') || (isImage(t) && images !== 'native'));
+    !!doclingTypes[t] &&
+    (!native.has(t) || (t === PDF && pdf !== Mode.Native) || (isImage(t) && images !== Mode.Native));
   // images the model can't take (tiff, bmp) are always sent as rendered page images
   const pageMode = (t: string) =>
-    (t === PDF && pdf === 'pages') || (isImage(t) && (images === 'pages' || !native.has(t)));
+    (t === PDF && pdf === Mode.Pages) || (isImage(t) && (images === Mode.Pages || !native.has(t)));
 
   /** file bytes, or null when the part should be left for the provider (remote URL / provider reference) */
   async function bytesOf(part: LanguageModelV4FilePart): Promise<Buffer | null> {
@@ -192,64 +187,37 @@ export function doclingAttachments(options: DoclingAttachmentsOptions): Language
     return bytes;
   }
 
+  /** one file through the docling server, as AI SDK parts wrapped in a <document> tag */
   async function convert(bytes: Buffer, filename: string, mediaType: string): Promise<Part[]> {
-    const image = isImage(mediaType);
-    let pages = pageMode(mediaType);
-    const fallback = !pages && (mediaType === PDF || image) && minConfidence > 0;
-    // page mode renders pages (except a native image, sent as-is); the PDF fallback needs renders of low pages
-    const needsPageImages = (pages && !(image && native.has(mediaType))) || (fallback && !image);
-    const { doc, pageScores, score } = await convertWithDocling(bytes, filename, {
+    const result = await convertWithDocling(bytes, filename, {
       url,
       apiKey,
       timeoutMs,
+      doclingOptions: opts.doclingOptions,
       options: {
-        to_formats: 'json',
-        image_export_mode: 'embedded',
-        // ONNX PP-OCR: lighter/faster than easyocr; pinned so an upstream default change can't swap engines silently
-        ocr_preset: 'rapidocr',
-        page_range: ['1', String(maxPages)],
-        // page mode sends whole pages: no picture crops; the fallback needs page images for low pages (PDFs)
-        ...(pages ? { include_images: 'false' } : { do_picture_classification: 'true' }),
-        ...(needsPageImages && { include_page_images: 'true' }),
-        ...opts.doclingOptions,
+        ...serverOptions,
+        mode: pageMode(mediaType) ? Mode.Pages : Mode.Docling,
+        sourceReadable: native.has(mediaType),
       },
     });
-
-    const open = {
-      type: 'text' as const,
-      text: `<document name="${filename}"${score === undefined ? '' : ` confidence="${fmtScore(score)}"`}>`,
+    const toPart = (p: DoclingPart): Part => {
+      if (p.type === 'text') return { type: 'text', text: p.text };
+      // `source`: the original file reads better than docling's output (low confidence, or a photo)
+      if (p.type === 'source') return { type: 'file', mediaType, filename, data: { type: 'data', data: bytes } };
+      const lowDetail = p.pictureClass && LOW_DETAIL_CLASSES.has(p.pictureClass);
+      return {
+        type: 'file',
+        mediaType: p.mediaType,
+        data: { type: 'data', data: p.data },
+        ...(lowDetail && { providerOptions: { openai: { imageDetail } } }),
+      };
     };
-    const close = { type: 'text' as const, text: '</document>' };
-    const lowPages = [...pageScores].filter(([, s]) => s < minConfidence).map(([n]) => n);
-    const empty = !(doc.texts?.length || doc.pictures?.length || doc.tables?.length);
-    let blocks: Block[] | undefined;
-    if (fallback && !image && lowPages.length && lowPages.length < pageScores.size) {
-      // some pages low: docling text for the confident pages, page images only for the low ones
-      blocks = pageBlocks(doc, { ...opts, imagePages: new Set(lowPages), scores: pageScores });
-    } else if ((fallback && (score ?? 1) < minConfidence) || (empty && (image || mediaType === PDF))) {
-      // low confidence, or nothing extracted: the model reads the original (PDF: its own text layer + page images)
-      if (native.has(mediaType) && !image)
-        return [open, { type: 'file', mediaType, filename, data: { type: 'data', data: bytes } }, close];
-      pages = true;
-    }
-    const original = image && native.has(mediaType) ? { mediaType, base64: bytes.toString('base64') } : undefined;
-    blocks ??= pages ? pageBlocks(doc, { ...opts, original }) : doclingToBlocks(doc, opts);
-    const cut = !image && Object.keys(doc.pages ?? {}).length >= maxPages;
-    if (cut)
-      blocks.push({ type: 'text', text: `[only the first ${maxPages} pages were read; the document may continue]` });
-    return mergeText([open, ...blocks.map(toPart), close]);
-  }
-
-  function toPart(b: Block): Part {
-    if (b.type === 'text') return b;
-    // reduced detail only where fine detail doesn't matter; charts, tables and pages stay readable
-    const low = b.cls && PHOTO.has(b.cls);
-    return {
-      type: 'file',
-      mediaType: b.mediaType,
-      data: { type: 'data', data: b.base64 },
-      ...(low && { providerOptions: { openai: { imageDetail } } }),
-    };
+    const score = result.confidence === undefined ? '' : ` confidence="${fmtScore(result.confidence)}"`;
+    return mergeText([
+      { type: 'text', text: `<document name="${filename}"${score}>` },
+      ...result.parts.map(toPart),
+      { type: 'text', text: '</document>' },
+    ]);
   }
 
   async function viaParser(part: LanguageModelV4FilePart): Promise<Part[]> {

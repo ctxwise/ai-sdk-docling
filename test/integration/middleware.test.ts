@@ -96,12 +96,12 @@ describe('with docling-serve', { skip: !up && `docling-serve not reachable at ${
   });
 
   test('every page low: the original PDF, or page images for a model without PDF support', async () => {
-    let parts = await sent(user(file('scan.pdf', T.pdf)), { minConfidence: Infinity });
+    let parts = await sent(user(file('scan.pdf', T.pdf)), { minConfidence: 1 });
     assert.deepEqual(typesOf(parts), ['text', 'text', 'application/pdf', 'text']);
     assert.match(textOf(parts), /<document name="scan\.pdf" confidence="0\.\d\d">/);
     assert.ok(sameBytes(parts[2].data.data, 'scan.pdf'));
     parts = await sent(user(file('scan.pdf', T.pdf)), {
-      minConfidence: Infinity,
+      minConfidence: 1,
       nativeTypes: ['image/png', 'image/jpeg'],
     });
     assert.match(textOf(parts), /\[page 1\][\s\S]*\[page 2\]/);
@@ -121,7 +121,7 @@ describe('with docling-serve', { skip: !up && `docling-serve not reachable at ${
     assert.match(textOf(parts), /<document name="newspaper\.jpg" confidence="0\.\d\d">/);
     assert.ok(!imagesOf(parts).some((p) => sameBytes(p.data.data, 'newspaper.jpg')), 'confident: no original');
     assert.ok(textOf(parts).length > 3000);
-    parts = await sent(user(file('newspaper.jpg', 'image/jpeg')), { minConfidence: Infinity });
+    parts = await sent(user(file('newspaper.jpg', 'image/jpeg')), { minConfidence: 1 });
     assert.equal(
       imagesOf(parts).filter((p) => sameBytes(p.data.data, 'newspaper.jpg')).length,
       1,
@@ -172,10 +172,10 @@ describe('with docling-serve', { skip: !up && `docling-serve not reachable at ${
     assert.ok(/Team/.test(textOf(ppt)) && imagesOf(ppt).length === 1);
     assert.deepEqual(
       imagesOf(await read('formats.tiff', 'image/tiff')).map((p) => p.mediaType),
-      ['image/png', 'image/png'],
-      'tiff page -> png',
+      ['image/jpeg', 'image/jpeg'],
+      'each tiff page as a compact JPEG render',
     );
-    assert.equal(imagesOf(await read('formats.bmp', 'image/bmp'))[0].mediaType, 'image/png');
+    assert.equal(imagesOf(await read('formats.bmp', 'image/bmp'))[0].mediaType, 'image/jpeg');
     const renamed = await sent(
       user({ type: 'file', data: fixture('report.docx'), mediaType: T.docx, filename: 'notes.txt' }),
     );

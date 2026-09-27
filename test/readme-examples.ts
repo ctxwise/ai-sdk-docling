@@ -6,6 +6,7 @@ import {
   DOCLING_TYPES,
   doclingAttachments,
   isPlainTextType,
+  Mode,
   mediaTypeOf,
   noServerDownloads,
   OPENAI_NATIVE_TYPES,
@@ -52,9 +53,9 @@ export async function serverOnly() {
 // Presets
 const base = { url: process.env.DOCLING_URL!, apiKey: process.env.DOCLING_API_KEY };
 doclingAttachments(base);
-doclingAttachments({ ...base, pdf: 'pages', images: 'pages' });
+doclingAttachments({ ...base, pdf: Mode.Pages, images: Mode.Pages });
 doclingAttachments({ ...base, minConfidence: 0, maxImages: 0 });
-doclingAttachments({ ...base, pdf: 'native', images: 'native' });
+doclingAttachments({ ...base, pdf: Mode.Native, images: Mode.Native });
 doclingAttachments({ ...base, nativeTypes: ['image/png', 'image/jpeg', 'image/webp', 'image/gif'] });
 
 // Choosing models: separate vision model, main model sees text only
