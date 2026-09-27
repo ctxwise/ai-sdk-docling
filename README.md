@@ -284,10 +284,13 @@ const { text } = await generateText({
 ```ts
 const base = { url: process.env.DOCLING_URL!, apiKey: process.env.DOCLING_API_KEY };
 
-// Balanced (default): docling text, images only when docling isn't confident
+// Hybrid (default) - best overall: docling reads layout, text and tables on every page; pictures (charts,
+// photos, diagrams) go to the vision model as images with their caption and inner text; pages docling reads
+// unreliably (confidence < 0.8: handwriting, bad scans) go as page images. Lowest text error, 40% of pages to the LLM.
 doclingAttachments(base);
 
-// Best quality - tables and reading order: every PDF page and image goes to the model as an image
+// Page mode - best tables and reading order, ~1.7x the tokens: every PDF page and image goes as an image,
+// plus docling's text on dense pages
 doclingAttachments({ ...base, pdf: 'pages', images: 'pages' });
 
 // Lowest cost: text only; pictures become caption lines (a photo uploaded on its own still goes through)
