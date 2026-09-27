@@ -10,7 +10,19 @@
     "erasableSyntaxOnly": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "types": ["node"]
+    "types": [
+      "node"
+    ],
+    "paths": {
+      "ai-sdk-docling": [
+        "./src/index.ts"
+      ]
+    }
   },
-  "include": ["src", "test", "bench/scripts"]
+  "include": [
+    "src",
+    "test",
+    "examples",
+    "bench/scripts"
+  ]
 }
