@@ -1,0 +1,62 @@
+{
+  "name": "ai-sdk-docling",
+  "version": "0.1.0",
+  "description": "Vercel AI SDK middleware that turns chat attachments (PDF, Office, images, scans) into LLM-ready text and images with docling-serve, using vision only where OCR is not confident",
+  "keywords": [
+    "ai-sdk",
+    "vercel-ai",
+    "docling",
+    "attachments",
+    "pdf",
+    "ocr",
+    "docx",
+    "pptx",
+    "xlsx",
+    "middleware",
+    "llm"
+  ],
+  "license": "MIT",
+  "author": "Udit Kumar",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p .",
+    "test": "node --test \"test/unit/*.test.ts\"",
+    "test:integration": "node --test \"test/integration/*.test.ts\"",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
+  },
+  "peerDependencies": {
+    "@ai-sdk/provider": "^4.0.0",
+    "ai": "^7.0.0"
+  },
+  "devDependencies": {
+    "@ai-sdk/openai": "^4.0.0",
+    "@ai-sdk/provider": "^4.0.18",
+    "@types/node": "^24.0.0",
+    "ai": "^7.0.113",
+    "typescript": "^7.0.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/uditkumar01/ai-sdk-docling.git"
+  },
+  "homepage": "https://github.com/uditkumar01/ai-sdk-docling#readme",
+  "bugs": {
+    "url": "https://github.com/uditkumar01/ai-sdk-docling/issues"
+  }
+}
