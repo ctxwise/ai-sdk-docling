@@ -40,18 +40,21 @@ Run anything that needs `.env` through `dotenvx run --`.
 ## Checks
 
 ```bash
+npm run lint                               # Biome: lint + format check (npm run format to fix)
+uvx ruff check . && uvx ruff format .      # Ruff: the Python in bench/ and server/
 npm run typecheck                          # src, tests, examples, bench scripts
 npm test                                   # unit tests, offline
 dotenvx run -- npm run test:integration    # needs docling-serve (~10 min)
 npm run build                              # dist/
 ```
 
-CI runs typecheck, unit tests, build and `npm pack --dry-run` on every push and pull request. Please run the
+CI runs Biome, Ruff, typecheck, unit tests, build and `npm pack --dry-run` on every push and pull request. Please run the
 integration tests yourself when you touch `src/`.
 
 ## Code style
 
-- Match the surrounding code: small functions, comments that say *why*, no dead code.
+- Formatting is Biome's (TypeScript) and Ruff's (Python); don't hand-format. Beyond that, match the surrounding
+  code: small functions, comments that say *why*, no dead code.
 - No new runtime dependencies. `ai` and `@ai-sdk/provider` are peer dependencies; everything else is Node's standard library.
 - New options get a JSDoc comment with `@default`, an entry in `DEFAULTS`, a row in the README configuration
   tables, and a test.
