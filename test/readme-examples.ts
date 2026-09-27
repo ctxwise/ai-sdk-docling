@@ -6,6 +6,7 @@ import {
   DOCLING_TYPES,
   doclingAttachments,
   isPlainTextType,
+  mediaTypeOf,
   noServerDownloads,
   OPENAI_NATIVE_TYPES,
 } from '../src/index.ts';
@@ -39,7 +40,7 @@ export async function serverOnly() {
             type: 'file',
             data: await readFile('contract.docx'),
             filename: 'contract.docx',
-            mediaType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            mediaType: mediaTypeOf('contract.docx'),
           },
         ],
       },

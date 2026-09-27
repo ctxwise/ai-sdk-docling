@@ -1,10 +1,15 @@
-// Next.js App Router: app/api/chat/route.ts. The client is a normal `useChat` page (see README); attachments
-// arrive as data URLs and are parsed here, before the model sees them.
+/**
+ * Next.js App Router chat route (app/api/chat/route.ts) for a standard `useChat` page.
+ * The browser sends attachments as data URLs; they are parsed here, before the model sees them.
+ */
 import { openai } from '@ai-sdk/openai';
 import { doclingAttachments, noServerDownloads } from '@ctxwise/ai-sdk-docling';
 import { convertToModelMessages, streamText, type UIMessage, wrapLanguageModel } from 'ai';
 
-// module scope: one middleware (and one parse cache) for all requests
+// Next.js route config: allow up to 5 minutes, since docling needs a few seconds per page on CPU.
+export const maxDuration = 300;
+
+// 1. Wrap the model at module scope, so every request shares one middleware and its parse cache.
 const model = wrapLanguageModel({
   model: openai('gpt-5-mini'),
   middleware: doclingAttachments({
@@ -13,15 +18,15 @@ const model = wrapLanguageModel({
   }),
 });
 
-export const maxDuration = 300; // docling takes seconds per page on CPU
-
 export async function POST(req: Request) {
+  // 2. Turn the UI messages from useChat into model messages (file parts included).
   const { messages }: { messages: UIMessage[] } = await req.json();
-  const result = streamText({
+
+  // 3. Stream the answer back in the format useChat expects.
+  return streamText({
     model,
     system: 'Answer from the attached documents. Say so when something is not in them.',
     messages: await convertToModelMessages(messages),
-    experimental_download: noServerDownloads, // never fetch user-supplied URLs server-side (SSRF)
-  });
-  return result.toUIMessageStreamResponse();
+    experimental_download: noServerDownloads, // never fetch URLs found in messages (SSRF)
+  }).toUIMessageStreamResponse();
 }

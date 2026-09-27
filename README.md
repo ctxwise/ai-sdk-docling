@@ -129,6 +129,7 @@ export default function Chat() {
 
 ```ts
 import { readFile } from 'node:fs/promises';
+import { mediaTypeOf, noServerDownloads } from '@ctxwise/ai-sdk-docling';
 import { generateText } from 'ai';
 
 const { text } = await generateText({
@@ -139,7 +140,7 @@ const { text } = await generateText({
     content: [
       { type: 'text', text: 'Summarize this contract and list every deadline.' },
       { type: 'file', data: await readFile('contract.docx'), filename: 'contract.docx',
-        mediaType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' },
+        mediaType: mediaTypeOf('contract.docx') }, // no browser supplies it on the server
     ],
   }],
 });
@@ -387,7 +388,8 @@ doclingAttachments({
 doclingAttachments({ ...base, nativeTypes: ['image/png', 'image/jpeg', 'image/webp', 'image/gif'] });
 ```
 
-The lower-level pieces are exported with TypeScript types: `convertWithDocling` (the docling-serve client),
+`mediaTypeOf(filename)` gives the media type for files read on the server. The lower-level pieces are exported
+with TypeScript types: `convertWithDocling` (the docling-serve client),
 `doclingToBlocks`, `pageBlocks` and `pageText` (a DoclingDocument -> text and image blocks).
 
 ## Supported documents
