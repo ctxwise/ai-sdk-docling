@@ -500,7 +500,11 @@ the surrounding text carry the name, so they are always placed next to the image
 
 ## Results
 
-88 hard OmniDocBench pages (handwriting, tables, charts, irregular layouts, newspapers), read by `gpt-5-mini`:
+On [opendataloader-bench](https://github.com/opendataloader-project/opendataloader-bench) (200 documents), the
+server's docling text alone - before any vision model - scores **0.888** overall, above published docling (0.882),
+with the biggest gain on tables (0.921 vs 0.887).
+
+On 88 hard OmniDocBench pages (handwriting, tables, charts, irregular layouts, newspapers), read by `gpt-5-mini`,
 the default routing has the lowest text error (0.112) while sending 40% of pages to the model as images. Charts,
 per-page-type results, how the thresholds were chosen, and the comparison with PyMuPDF4LLM and MarkItDown are in
 the [server's quality report](https://github.com/ctxwise/docling-serve/blob/main/ctxwise/README.md#quality).
