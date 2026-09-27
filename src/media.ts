@@ -33,6 +33,32 @@ export const DOCLING_TYPES: Readonly<Record<string, string>> = {
   'image/bmp': 'bmp',
 };
 
+// extensions not in DOCLING_TYPES, plus the aliases people actually use
+const EXTRA_TYPES: Readonly<Record<string, string>> = {
+  jpeg: 'image/jpeg',
+  tif: 'image/tiff',
+  htm: 'text/html',
+  gif: 'image/gif',
+  md: 'text/markdown',
+  markdown: 'text/markdown',
+  txt: 'text/plain',
+  json: 'application/json',
+  xml: 'application/xml',
+  yaml: 'application/yaml',
+  yml: 'application/yaml',
+};
+
+/**
+ * Media type from a file name's extension - for files read on the server, where no browser supplies one.
+ * Unknown extensions give `application/octet-stream`, which the middleware reports to the model as unreadable.
+ */
+export function mediaTypeOf(filename: string): string {
+  const ext = filename.toLowerCase().split('.').pop() ?? '';
+  return (
+    EXTRA_TYPES[ext] ?? Object.entries(DOCLING_TYPES).find(([, e]) => e === ext)?.[0] ?? 'application/octet-stream'
+  );
+}
+
 /** Default test for attachments read as-is (exact, no parser): text/* and common text-based application types. */
 export const isPlainTextType = (mediaType: string): boolean =>
   mediaType.startsWith('text/') ||
