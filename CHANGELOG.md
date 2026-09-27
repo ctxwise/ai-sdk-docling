@@ -4,6 +4,18 @@ All notable changes to this project. Versions follow [Semantic Versioning](https
 generated from [Conventional Commits](https://www.conventionalcommits.org) by
 [release-please](https://github.com/googleapis/release-please) when a release pull request is merged.
 
+## [0.1.2](https://github.com/ctxwise/ai-sdk-docling/compare/v0.1.1...v0.1.2) (2026-09-27)
+
+
+### Documentation
+
+* point links to the ctxwise organization ([097f284](https://github.com/ctxwise/ai-sdk-docling/commit/097f284590307aadd2bd6075a3838201359e8a74))
+
+
+### Build
+
+* publish as @ctxwise/ai-sdk-docling ([ed1cce3](https://github.com/ctxwise/ai-sdk-docling/commit/ed1cce35ae640491dff8a22852e661bb00bf1ae8))
+
 ## [0.1.1](https://github.com/ctxwise/ai-sdk-docling/compare/v0.1.0...v0.1.1) (2026-09-27)
 
 
