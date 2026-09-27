@@ -4,6 +4,13 @@ All notable changes to this project. Versions follow [Semantic Versioning](https
 generated from [Conventional Commits](https://www.conventionalcommits.org) by
 [release-please](https://github.com/googleapis/release-please) when a release pull request is merged.
 
+## [0.1.3](https://github.com/ctxwise/ai-sdk-docling/compare/v0.1.2...v0.1.3) (2026-09-27)
+
+
+### Documentation
+
+* render readme diagrams as images so they show on npm ([c483817](https://github.com/ctxwise/ai-sdk-docling/commit/c4838173adb31bf9c3d9b5cc6e7ed22d76151d2c))
+
 ## [0.1.2](https://github.com/ctxwise/ai-sdk-docling/compare/v0.1.1...v0.1.2) (2026-09-27)
 
 
