@@ -38,7 +38,9 @@
     "typecheck": "tsc -p .",
     "test": "node --test \"test/unit/*.test.ts\"",
     "test:integration": "node --test \"test/integration/*.test.ts\"",
-    "prepublishOnly": "npm run typecheck && npm test && npm run build"
+    "prepublishOnly": "npm run typecheck && npm run lint && npm test && npm run build",
+    "lint": "biome check .",
+    "format": "biome check --write ."
   },
   "peerDependencies": {
     "@ai-sdk/provider": "^4.0.0",
@@ -47,6 +49,7 @@
   "devDependencies": {
     "@ai-sdk/openai": "^4.0.0",
     "@ai-sdk/provider": "^4.0.18",
+    "@biomejs/biome": "2.5.14",
     "@types/node": "^24.0.0",
     "ai": "^7.0.113",
     "typescript": "^7.0.2"
