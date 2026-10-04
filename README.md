@@ -46,7 +46,7 @@ and sends the vision model only what OCR can't read.
 npm install @ctxwise/ai-sdk-docling   # peer dependencies: ai@7, @ai-sdk/provider@4
 ```
 
-**2. Start the docling server** - [ctxwise/docling-serve](https://github.com/ctxwise/docling-serve), docling-serve plus the endpoint this
+**2. Start the docling server:** [ctxwise/docling-serve](https://github.com/ctxwise/docling-serve), docling-serve plus the endpoint this
 package calls. It never calls an LLM; its key only protects the server:
 
 ```bash
@@ -57,7 +57,7 @@ docker run -d -p 127.0.0.1:5001:5001 -e DOCLING_SERVE_API_KEY=<your key> \
 Sizing, scaling and production settings: [deployment guide](https://github.com/ctxwise/docling-serve/blob/main/ctxwise/README.md#deployment).
 
 **3. Wrap your model** once, at module scope (the parse cache is shared across requests), and use it anywhere
-you'd use the plain model - `streamText`, `generateText`, a `useChat` route:
+you'd use the plain model: `streamText`, `generateText`, a `useChat` route:
 
 ```ts
 import { openai } from '@ai-sdk/openai';
@@ -78,7 +78,7 @@ your server. Complete routes and scripts are under [Examples](#examples).
 Runnable, type-checked examples live in [examples/](https://github.com/ctxwise/ai-sdk-docling/blob/main/examples/README.md). The most common setups:
 
 <details open>
-<summary><b>Next.js chat with file uploads</b> - route + client</summary>
+<summary><b>Next.js chat with file uploads</b>: route + client</summary>
 
 ```ts
 // app/api/chat/route.ts
@@ -104,7 +104,7 @@ export async function POST(req: Request) {
 ```
 
 ```tsx
-// app/page.tsx - a standard useChat page; files are sent as data URLs
+// app/page.tsx: a standard useChat page; files are sent as data URLs
 'use client';
 import { useChat } from '@ai-sdk/react';
 import { useState } from 'react';
@@ -126,7 +126,7 @@ export default function Chat() {
 </details>
 
 <details>
-<summary><b>Server-side, no UI</b> - summarize a file</summary>
+<summary><b>Server-side, no UI</b>: summarize a file</summary>
 
 ```ts
 import { readFile } from 'node:fs/promises';
@@ -150,7 +150,7 @@ const { text } = await generateText({
 </details>
 
 <details>
-<summary><b>Structured extraction</b> - typed JSON from a spreadsheet, scan or PDF</summary>
+<summary><b>Structured extraction</b>: typed JSON from a spreadsheet, scan or PDF</summary>
 
 ```ts
 import { generateText, jsonSchema, Output } from 'ai';
@@ -184,7 +184,7 @@ const { output } = await generateText({
 </details>
 
 <details>
-<summary><b>Separate vision model</b> - main model sees text only</summary>
+<summary><b>Separate vision model</b>: main model sees text only</summary>
 
 ```ts
 const model = wrapLanguageModel({
@@ -200,7 +200,7 @@ const model = wrapLanguageModel({
 </details>
 
 <details>
-<summary><b>Plain Node server</b> - the chat endpoint without a framework</summary>
+<summary><b>Plain Node server</b>: the chat endpoint without a framework</summary>
 
 ```ts
 import { createServer } from 'node:http';
@@ -217,7 +217,7 @@ createServer(async (req, res) => {
 </details>
 
 <details>
-<summary><b>Without an LLM</b> - parse to Markdown for search or storage</summary>
+<summary><b>Without an LLM</b>: parse to Markdown for search or storage</summary>
 
 ```ts
 import { convertWithDocling } from '@ctxwise/ai-sdk-docling';
@@ -239,16 +239,16 @@ const markdown = parts.map((p) => (p.type === 'text' ? p.text : '[image]')).join
 
 The default is a hybrid, decided page by page:
 
-1. **Docling reads every page** - layout, reading order, text, tables (as Markdown, merged headers kept).
+1. **Docling reads every page:** layout, reading order, text, tables (as Markdown, merged headers kept).
 2. **Pictures go to the vision model as images.** Docling crops each chart, diagram, photo or map, labels its type
    and attaches its caption and the text it read inside it, so a chart arrives with its exact numbers in writing.
    Logos and icons are dropped; photos go at low detail (cheap), charts at full detail.
 3. **Pages docling reads unreliably go as images.** Docling scores each page (OCR + layout, 0-1). Below
-   `minConfidence` (0.8) - handwriting, bad scans - that page goes to the model as an image instead of docling's
+   `minConfidence` (0.8), as with handwriting or bad scans, that page goes to the model as an image instead of docling's
    text. Only that page: the rest of the document stays text. If every page is low, the original PDF goes instead.
 
 Each attachment is wrapped as `<document name="..." confidence="0.86">` (the worst page's score), so the model knows
-where each file starts and how far to trust its text. A mixed PDF - one clean page, one handwritten page - arrives as:
+where each file starts and how far to trust its text. A mixed PDF (one clean page, one handwritten page) arrives as:
 
 ```
 <document name="mixed.pdf" confidence="0.79">
@@ -285,14 +285,14 @@ const model = wrapLanguageModel({
 streamText({ model, messages }); // unchanged
 ```
 
-Any two AI SDK models work, from any providers - the main model can even be text-only. Use it when:
+Any two AI SDK models work, from any providers; the main model can even be text-only. Use it when:
 
 - **the main model is expensive**: image tokens are billed at the vision model's price instead, or
 - **the main model can't read images or PDFs** at all.
 
 Trade-offs: the main model reads a description of each picture instead of seeing it, and one extra model call is
 made per image (in parallel, cached by content hash, so history turns cost nothing). Pick a capable vision model:
-on the hard pages `gpt-5-mini` scored 0.168 text error, `gpt-5-nano` 0.503 - worse than docling alone. The
+on the hard pages `gpt-5-mini` scored 0.168 text error, `gpt-5-nano` 0.503, worse than docling alone. The
 instruction it gets is `visionPrompt`.
 
 When the main model is `gpt-5-mini`, don't set `visionModel`: it reads the images itself, for less.
@@ -315,7 +315,7 @@ doclingAttachments({ ...base, pdf: Mode.Native, images: Mode.Native });  // no d
 | **Hybrid** (default) | **0.112** | 0.242 | 79.1 | ~2.2K | general use: best text at 40% of pages as images |
 | Page mode | 0.111 | **0.217** | **86.3** | ~3.8K | tables and complex layouts matter most |
 | Docling text only | 0.171 | 0.349 | 68.6 | ~1.1K | lowest cost; pictures become caption lines |
-| Native | - | - | - | provider's | trusted digital PDFs, speed first; Office files still use docling |
+| Native | none | none | none | provider's | trusted digital PDFs, speed first; Office files still use docling |
 
 Measured on the 88 hard pages with `gpt-5-mini`. In page mode every PDF page and image goes as an image, plus
 docling's text on dense pages without tables (vision alone misreads small print). A photo uploaded on its own always
@@ -323,7 +323,7 @@ reaches the model, whatever the preset.
 
 ## Configuration
 
-`doclingAttachments(options)` - only `url` is required.
+`doclingAttachments(options)`: only `url` is required.
 
 **What goes where**
 
@@ -332,14 +332,14 @@ reaches the model, whatever the preset.
 | `pdf` | `'docling'` | `'docling'` hybrid · `'pages'` page images · `'native'` the provider reads the PDF |
 | `images` | `'docling'` | the same three modes for image attachments |
 | `minConfidence` | `0.8` | pages below this docling confidence go as images; `0` = never |
-| `visionModel` | - | a separate model that turns images into text ([Choosing models](#choosing-models)) |
+| `visionModel` | unset | a separate model that turns images into text ([Choosing models](#choosing-models)) |
 | `visionPrompt` | built-in | its instruction: exact text and tables, chart values, short photo description |
 
 **Pictures**
 
 | Option | Default | |
 |---|---|---|
-| `maxImages` | `10` | pictures per document - charts, diagrams and tables first, photos last; the rest become a caption line |
+| `maxImages` | `10` | pictures per document: charts, diagrams and tables first, photos last; the rest become a caption line |
 | `imageDetail` | `'low'` | detail for photos, signatures and stamps; charts, tables and pages always full detail |
 | `pictureTextChars` | `600` | text docling read inside a chart or diagram, sent next to it; `0` = off |
 | `skipClasses` | `['logo', 'icon']` | picture types never sent |
@@ -364,7 +364,7 @@ reaches the model, whatever the preset.
 | `nativeTypes` | `OPENAI_NATIVE_TYPES` | media types the model accepts as-is (PDF, PNG, JPEG, WEBP, GIF) |
 | `doclingTypes` | `DOCLING_TYPES` | media types docling parses, mapped to the extension docling needs |
 | `plainTextTypes` | `isPlainTextType` | media types read as plain text |
-| `doclingOptions` | - | extra [docling-serve options](https://github.com/docling-project/docling-serve/blob/main/docs/usage.md), e.g. `{ ocr_lang: ['en', 'de'] }` |
+| `doclingOptions` | unset | extra [docling-serve options](https://github.com/docling-project/docling-serve/blob/main/docs/usage.md), e.g. `{ ocr_lang: ['en', 'de'] }` |
 | `fetchUrls` | `false` | download `http(s)` file URLs server-side (off: SSRF risk) |
 | `onError` | `console.warn` | receives parse errors; the model only gets a generic note |
 
@@ -414,9 +414,9 @@ docling-serve client for use without a model.
 DOC, PPT, XLS and RTF go through LibreOffice, which the docling server image includes.
 
 <details>
-<summary>What the model receives - real output for each type</summary>
+<summary>What the model receives: real output for each type</summary>
 
-**DOCX** - headings, tables and embedded pictures in reading order:
+**DOCX:** headings, tables and embedded pictures in reading order:
 ```
 <document name="report.docx">
 ## Quarterly Report
@@ -434,7 +434,7 @@ Figure 1: Alan Turing, founder.
 </document>
 ```
 
-**PPTX** - slide numbers, speaker notes, the chart's own data:
+**PPTX:** slide numbers, speaker notes, the chart's own data:
 ```
 [slide 1]
 # Roadmap 2026
@@ -450,7 +450,7 @@ Notes: Speaker note: open with the Q3 numbers.
 |South|17|
 ```
 
-**XLSX** - sheet names, tables, chart data:
+**XLSX:** sheet names, tables, chart data:
 ```
 <document name="sales.xlsx">
 ## Sheet: Sales
@@ -464,25 +464,25 @@ Notes: Speaker note: open with the Q3 numbers.
 </document>
 ```
 
-**Scanned PDF**, confident (0.86) - OCR text with the photos as image parts:
+**Scanned PDF**, confident (0.86): OCR text with the photos as image parts:
 ```
 <document name="scan.pdf" confidence="0.86">
 ## Alan Turing
 
-Alan Mathison Turing (23 June 1912 - 7 June 1954) was an English mathematician, computer scientist ...
+Alan Mathison Turing (23 June 1912 to 7 June 1954) was an English mathematician, computer scientist ...
 <image/png part, 104 KB>
 Born ... 23 June 1912 Maida Vale, London, England ...
 </document>
 ```
 
-**Photo** - nothing to extract (confidence 0.00), so the model gets the image itself:
+**Photo:** nothing to extract (confidence 0.00), so the model gets the image itself:
 ```
 <document name="person.png" confidence="0.00">
 <image/png part, 104 KB>
 </document>
 ```
 
-**Chart inside a PDF** - the picture plus the numbers docling read in it:
+**Chart inside a PDF:** the picture plus the numbers docling read in it:
 ```
 [image 3 (line chart): Figure 5: Prediction performance ... | text in image: 70 | mAP 0.50:0.95 | 65 | ... | % of DocLayNet training set | 20 | 40 | 60 | 80 | 100]
 <image/png part>
@@ -501,7 +501,7 @@ the surrounding text carry the name, so they are always placed next to the image
 ## Results
 
 On [opendataloader-bench](https://github.com/opendataloader-project/opendataloader-bench) (200 documents), the
-server's docling text alone - before any vision model - scores **0.888** overall, above published docling (0.882),
+server's docling text alone, before any vision model, scores **0.888** overall, above published docling (0.882),
 with the biggest gain on tables (0.921 vs 0.887).
 
 On 88 hard OmniDocBench pages (handwriting, tables, charts, irregular layouts, newspapers), read by `gpt-5-mini`,
@@ -529,7 +529,7 @@ AI SDK doesn't either), sanitizes file names, and never shows internal errors to
 
 ## Contributing
 
-Issues and pull requests are welcome - see [CONTRIBUTING.md](https://github.com/ctxwise/ai-sdk-docling/blob/main/CONTRIBUTING.md) for setup, tests, commit style and
+Issues and pull requests are welcome; see [CONTRIBUTING.md](https://github.com/ctxwise/ai-sdk-docling/blob/main/CONTRIBUTING.md) for setup, tests, commit style and
 how to benchmark routing changes. Please report security issues privately ([SECURITY.md](https://github.com/ctxwise/ai-sdk-docling/blob/main/SECURITY.md)). This
 project follows a [code of conduct](https://github.com/ctxwise/ai-sdk-docling/blob/main/CODE_OF_CONDUCT.md); changes are listed in [CHANGELOG.md](https://github.com/ctxwise/ai-sdk-docling/blob/main/CHANGELOG.md).
 

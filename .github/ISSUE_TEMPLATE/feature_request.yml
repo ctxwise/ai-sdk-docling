@@ -13,7 +13,7 @@ body:
     id: proposal
     attributes:
       label: Proposal
-      description: How it could work - an option, an API sketch, a routing rule.
+      description: How it could work: an option, an API sketch, a routing rule.
   - type: textarea
     id: evidence
     attributes:

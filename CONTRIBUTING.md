@@ -96,7 +96,7 @@ version or the changelog by hand.
 1. Commits on `main` (in the format above) keep a **release pull request** open, with the next version and the
    generated CHANGELOG.md entry.
 2. The version comes from the commits since the last release: `feat:` bumps the minor; `fix:`, `perf:`, `docs:`,
-   `build:` and `revert:` the patch; a breaking change (`feat!:` or a `BREAKING CHANGE:` footer) the major - the
+   `build:` and `revert:` the patch; a breaking change (`feat!:` or a `BREAKING CHANGE:` footer) the major. The
    minor while the version is below 1.0. `refactor`, `test`, `chore`, `ci` and `style` commits are left out of the
    changelog and never trigger a release on their own.
    Nothing is approved or merged automatically: a maintainer reviews and merges the release pull request.

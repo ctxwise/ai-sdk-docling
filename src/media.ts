@@ -49,7 +49,7 @@ const EXTRA_TYPES: Readonly<Record<string, string>> = {
 };
 
 /**
- * Media type from a file name's extension - for files read on the server, where no browser supplies one.
+ * Media type from a file name's extension, for files read on the server, where no browser supplies one.
  * Unknown extensions give `application/octet-stream`, which the middleware reports to the model as unreadable.
  */
 export function mediaTypeOf(filename: string): string {

@@ -95,7 +95,7 @@ export const DEFAULTS = {
 
 /**
  * Pass as `experimental_download` to streamText/generateText. The AI SDK otherwise downloads URL file parts
- * the model doesn't accept by URL - from your server, to any address a user puts in a message (SSRF).
+ * the model doesn't accept by URL, from your server, to any address a user puts in a message (SSRF).
  * With this, nothing is downloaded server-side; URL parts go to the provider unchanged.
  */
 export const noServerDownloads: Experimental_DownloadFunction = async (files) => files.map(() => null);

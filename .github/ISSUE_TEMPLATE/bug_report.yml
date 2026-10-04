@@ -4,7 +4,7 @@ labels: [bug]
 body:
   - type: markdown
     attributes:
-      value: Thanks for reporting. Please don't attach confidential documents - a small file that reproduces the problem is ideal.
+      value: Thanks for reporting. Please don't attach confidential documents; a small file that reproduces the problem is ideal.
   - type: textarea
     id: what
     attributes:
