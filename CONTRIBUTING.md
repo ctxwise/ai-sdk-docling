@@ -29,7 +29,7 @@ Run anything that needs `.env` through `dotenvx run --`.
 
 | Path | What |
 |---|---|
-| `src/` | the package: `middleware.ts` (routing), `docling.ts` (docling-serve client), `blocks.ts` (document -> text and image blocks), `media.ts` (type tables), `cache.ts` |
+| `src/` | the package: `middleware.ts` (routing), `docling.ts` (docling-serve client), `media.ts` (type tables), `constants.ts` (option values), `cache.ts` |
 | `test/unit/` | offline tests, run in CI |
 | `test/integration/` | tests against a live docling-serve (skipped when it isn't running); one real OpenAI call when `OPENAI_API_KEY` is set |
 | `test/fixtures/` | the documents the tests use |

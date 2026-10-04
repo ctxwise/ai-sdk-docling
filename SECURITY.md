@@ -19,9 +19,9 @@ This package handles untrusted files and messages from chat users. In scope, for
 - a file name or document content breaking out of the `<document>` wrapper
 - internal errors, paths or hosts reaching the model
 - limits (`maxFileBytes`, `maxPages`, `timeoutMs`, `cacheMB`) that can be bypassed
-- the docling-serve setup in `server/` and `docker-compose.yml` exposing more than intended
 
-Vulnerabilities in docling or docling-serve themselves belong to the
+The server image and its compose file live in [ctxwise/docling-serve](https://github.com/ctxwise/docling-serve);
+report problems with that setup there. Vulnerabilities in docling or docling-serve themselves belong to the
 [docling project](https://github.com/docling-project/docling-serve/security).
 
 ## Deployment checklist

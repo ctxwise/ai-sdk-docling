@@ -12,7 +12,7 @@
 
 ## Running
 
-From the repository root, with docling-serve running (`dotenvx run -- docker compose up -d`) and `OPENAI_API_KEY`
+From the repository root, with docling-serve running (see [ctxwise/docling-serve](https://github.com/ctxwise/docling-serve)) and `OPENAI_API_KEY`
 in `.env`:
 
 ```bash

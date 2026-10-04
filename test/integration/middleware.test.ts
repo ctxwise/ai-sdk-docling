@@ -1,4 +1,4 @@
-// Needs a running docling-serve (docker compose up -d): dotenvx run -- npm run test:integration
+// Needs a running docling-serve (github.com/ctxwise/docling-serve): dotenvx run -- npm run test:integration
 // OPENAI_API_KEY set = also one real OpenAI round trip.
 import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';

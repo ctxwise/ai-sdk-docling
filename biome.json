@@ -37,7 +37,7 @@
   },
   "overrides": [
     {
-      "includes": ["test/**", "bench/**", "examples/**"],
+      "includes": ["test/**", "examples/**"],
       "linter": {
         "rules": {
           "suspicious": {
